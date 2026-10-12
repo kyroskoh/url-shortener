@@ -4,7 +4,7 @@
 
 Blink is a self-hosted URL shortener for **[layurl.com](https://layurl.com)** — Node.js, Postgres, Redis, nginx, and Cloudflare. Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url), with a fresh UI and Redis-backed redirects.
 
-> GitHub repository name: `url-shortener`. Product name: **Blink**. Current release: **[v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0)**.
+> GitHub repository name: `url-shortener`. Product name: **Blink**. Current release: **[v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1)**.
 
 ## Quick start
 
@@ -28,7 +28,7 @@ Default local admin password/API key come from `.env` (change before any public 
 - **Phase 1:** quarantine / re-enable · optional URL blocklist/HTTP check · Turnstile force-on · [abuse playbook](docs/ABUSE.md)
 - **Phase 2:** UTM builder · destination preview · bulk CSV import · tags/folders · per-link password · one-time links · custom landing page (`BLINK_LANDING_PAGE`)
 - **Phase 3:** hourly hit charts · max redirects · HMAC webhooks · idempotent create · cursor pagination · Prometheus `/api/metrics` · `@blink/client` + `blink` CLI
-- QR codes · CSV export · Docker Compose · Cloudflare DNS/SSL/cache provisioner
+- QR codes (show/hide + PNG download) · CSV export · Docker Compose · Cloudflare DNS/SSL/cache provisioner
 
 Phase 4 (backups, CI images, E2E) is specified in [PRD.md](PRD.md). Ideas beyond the roadmap: [ENHANCEMENT.md](ENHANCEMENT.md).
 

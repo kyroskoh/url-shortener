@@ -10,5 +10,6 @@ coverage/
 *.tsbuildinfo
 .idea/
 .vscode/
+scripts/.browser-verify/
 apps/api/drizzle/meta/
 !apps/api/drizzle/meta/_journal.json

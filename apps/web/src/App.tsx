@@ -59,11 +59,43 @@ export function App() {
   const [hitChart, setHitChart] = useState<{
     slug: string;
     points: { t: string; hits: number }[];
+    totalHits: number;
   } | null>(null);
   const [importCsv, setImportCsv] = useState("");
   const [importResult, setImportResult] = useState<string>("");
   const [newTag, setNewTag] = useState("");
   const [newFolder, setNewFolder] = useState("");
+  const [openQrSlugs, setOpenQrSlugs] = useState<Set<string>>(() => new Set());
+
+  function toggleQr(slug: string) {
+    setOpenQrSlugs((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  }
+
+  async function downloadQr(slug: string) {
+    setError("");
+    try {
+      const res = await fetch(api.qrUrl(slug), { credentials: "include" });
+      if (!res.ok) {
+        setError(`QR download failed (${res.status})`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `blink-${slug}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setInfo(`Downloaded QR for ${slug}`);
+    } catch {
+      setError("QR download failed");
+    }
+  }
 
   const refreshAuth = useCallback(async () => {
     const me = await api.me();
@@ -305,7 +337,7 @@ export function App() {
     }
   }
 
-  async function loadHits(slug: string) {
+  async function loadHits(slug: string, totalHits = 0) {
     setBusy(true);
     setError("");
     try {
@@ -315,7 +347,7 @@ export function App() {
         return;
       }
       if (res.data) {
-        setHitChart({ slug, points: res.data.points });
+        setHitChart({ slug, points: res.data.points, totalHits });
       }
     } finally {
       setBusy(false);
@@ -625,14 +657,15 @@ export function App() {
                 <button type="button" className="secondary" onClick={() => void shareCreated()}>
                   Share
                 </button>
-                {authed && (
-                  <img
-                    className="qr"
-                    src={api.qrUrl(created.slug)}
-                    alt="QR code"
-                  />
-                )}
               </div>
+              {authed && (
+                <QrControls
+                  slug={created.slug}
+                  open={openQrSlugs.has(created.slug)}
+                  onToggle={() => toggleQr(created.slug)}
+                  onDownload={() => void downloadQr(created.slug)}
+                />
+              )}
             </div>
           )}
         </section>
@@ -770,18 +803,28 @@ export function App() {
           )}
 
           {hitChart && (
-            <div className="panel" style={{ marginBottom: "1rem" }}>
-              <p className="meta">
-                Hits (hourly) for <code>{hitChart.slug}</code>
-              </p>
-              <HitsChart points={hitChart.points} />
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => setHitChart(null)}
-              >
-                Close
-              </button>
+            <div className="panel hits-panel" style={{ marginBottom: "1rem" }}>
+              <div className="hits-panel-head">
+                <div>
+                  <h3 className="hits-panel-title">
+                    Hits · <code>{hitChart.slug}</code>
+                  </h3>
+                  <p className="meta" style={{ margin: 0 }}>
+                    Last 24 hours (UTC hourly buckets)
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setHitChart(null)}
+                >
+                  Close
+                </button>
+              </div>
+              <HitsChart
+                points={hitChart.points}
+                lifetimeHits={hitChart.totalHits}
+              />
             </div>
           )}
 
@@ -942,7 +985,7 @@ export function App() {
                         type="button"
                         className="secondary"
                         disabled={busy}
-                        onClick={() => void loadHits(link.slug)}
+                        onClick={() => void loadHits(link.slug, link.hits)}
                       >
                         Hits
                       </button>
@@ -972,12 +1015,24 @@ export function App() {
                       >
                         Delete
                       </button>
-                      <img
-                        className="qr"
-                        src={api.qrUrl(link.slug)}
-                        alt={`QR for ${link.slug}`}
-                      />
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => toggleQr(link.slug)}
+                        aria-expanded={openQrSlugs.has(link.slug)}
+                      >
+                        {openQrSlugs.has(link.slug) ? "Hide QR" : "Show QR"}
+                      </button>
                     </div>
+                    {openQrSlugs.has(link.slug) && (
+                      <QrControls
+                        slug={link.slug}
+                        open
+                        onToggle={() => toggleQr(link.slug)}
+                        onDownload={() => void downloadQr(link.slug)}
+                        hideToggle
+                      />
+                    )}
                   </>
                 )}
               </article>
@@ -1006,38 +1061,158 @@ export function App() {
   );
 }
 
-function HitsChart({ points }: { points: { t: string; hits: number }[] }) {
-  if (!points.length) {
-    return <p className="meta">No hit data in this window yet.</p>;
-  }
-  const max = Math.max(...points.map((p) => p.hits), 1);
-  const w = 360;
-  const h = 120;
-  const pad = 8;
-  const step = points.length > 1 ? (w - pad * 2) / (points.length - 1) : 0;
-  const coords = points.map((p, i) => {
-    const x = pad + i * step;
-    const y = h - pad - (p.hits / max) * (h - pad * 2);
-    return `${x},${y}`;
-  });
+function QrControls({
+  slug,
+  open,
+  onToggle,
+  onDownload,
+  hideToggle = false,
+}: {
+  slug: string;
+  open: boolean;
+  onToggle: () => void;
+  onDownload: () => void;
+  hideToggle?: boolean;
+}) {
   return (
-    <svg
-      className="hits-chart"
-      viewBox={`0 0 ${w} ${h}`}
-      role="img"
-      aria-label="Hourly hit counts"
-    >
-      <polyline
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        points={coords.join(" ")}
-      />
-      {points.map((p, i) => {
-        const x = pad + i * step;
-        const y = h - pad - (p.hits / max) * (h - pad * 2);
-        return <circle key={p.t} cx={x} cy={y} r={3} fill="currentColor" />;
-      })}
-    </svg>
+    <div className="qr-block">
+      {!hideToggle && (
+        <div className="row">
+          <button
+            type="button"
+            className="secondary"
+            onClick={onToggle}
+            aria-expanded={open}
+          >
+            {open ? "Hide QR" : "Show QR"}
+          </button>
+          {open && (
+            <button type="button" className="secondary" onClick={onDownload}>
+              Download PNG
+            </button>
+          )}
+        </div>
+      )}
+      {open && (
+        <div className="qr-preview">
+          <img
+            className="qr"
+            src={api.qrUrl(slug)}
+            alt={`QR code for ${slug}`}
+          />
+          {hideToggle && (
+            <button type="button" className="secondary" onClick={onDownload}>
+              Download PNG
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function hourKeyUtc(d: Date): string {
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours()),
+  ).toISOString();
+}
+
+/** Fill the last 24 UTC hours so sparse aggregates still read as a timeline. */
+function fillLast24Hours(
+  points: { t: string; hits: number }[],
+): { t: string; hits: number; label: string }[] {
+  const byHour = new Map(
+    points.map((p) => [hourKeyUtc(new Date(p.t)), Number(p.hits) || 0]),
+  );
+  const end = new Date();
+  end.setUTCMinutes(0, 0, 0);
+  const out: { t: string; hits: number; label: string }[] = [];
+  for (let i = 23; i >= 0; i--) {
+    const bucket = new Date(end.getTime() - i * 60 * 60 * 1000);
+    const t = hourKeyUtc(bucket);
+    const hits = byHour.get(t) ?? 0;
+    const hh = String(bucket.getUTCHours()).padStart(2, "0");
+    out.push({ t, hits, label: `${hh}:00` });
+  }
+  return out;
+}
+
+function HitsChart({
+  points,
+  lifetimeHits,
+}: {
+  points: { t: string; hits: number }[];
+  lifetimeHits: number;
+}) {
+  const series = fillLast24Hours(points);
+  const windowTotal = series.reduce((sum, p) => sum + p.hits, 0);
+  const peak = series.reduce(
+    (best, p) => (p.hits > best.hits ? p : best),
+    series[0],
+  );
+  const max = Math.max(...series.map((p) => p.hits), 1);
+  const chartH = 140;
+
+  return (
+    <div className="hits-chart-wrap">
+      <div className="hits-stats">
+        <div className="hits-stat">
+          <span className="hits-stat-value">{windowTotal}</span>
+          <span className="hits-stat-label">last 24h</span>
+        </div>
+        <div className="hits-stat">
+          <span className="hits-stat-value">{lifetimeHits}</span>
+          <span className="hits-stat-label">lifetime</span>
+        </div>
+        <div className="hits-stat">
+          <span className="hits-stat-value">
+            {peak.hits > 0 ? peak.hits : "—"}
+          </span>
+          <span className="hits-stat-label">
+            {peak.hits > 0 ? `peak ${peak.label} UTC` : "peak hour"}
+          </span>
+        </div>
+      </div>
+
+      {windowTotal === 0 ? (
+        <p className="meta hits-empty">
+          No redirects recorded in the last 24 hours
+          {lifetimeHits > 0
+            ? " (lifetime hits may predate this window or still be flushing)."
+            : "."}
+        </p>
+      ) : (
+        <>
+          <div
+            className="hits-bars"
+            role="img"
+            aria-label={`Hourly hits for the last 24 hours, total ${windowTotal}`}
+          >
+            {series.map((p) => {
+              const pct = Math.max((p.hits / max) * 100, p.hits > 0 ? 6 : 0);
+              return (
+                <div className="hits-bar-col" key={p.t} title={`${p.label} UTC · ${p.hits}`}>
+                  <div className="hits-bar-track" style={{ height: chartH }}>
+                    {p.hits > 0 && (
+                      <span className="hits-bar-count">{p.hits}</span>
+                    )}
+                    <div
+                      className={`hits-bar${p.hits > 0 ? " is-active" : ""}`}
+                      style={{ height: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="hits-bar-label">
+                    {Number(p.label.slice(0, 2)) % 6 === 0
+                      ? p.label.slice(0, 2)
+                      : ""}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="meta hits-axis-hint">UTC hour →</p>
+        </>
+      )}
+    </div>
   );
 }

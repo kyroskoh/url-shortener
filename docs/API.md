@@ -56,11 +56,11 @@ Public create (when `BLINK_PUBLIC_MODE=true`) may omit auth; may require Turnsti
 | POST | `/api/links` | Admin or public | Create (see body below); optional header `Idempotency-Key` |
 | GET | `/api/links/:slug` | Admin | Get one |
 | GET | `/api/links/:slug/preview` | Admin | Title + favicon (Redis-cached); SSRF-safe. Soft-handles upstream non-2xx (parses HTML when present; else hostname fallback) |
-| GET | `/api/links/:slug/hits` | Admin | Hourly hit series `?from=` `?to=` (ISO) → `{ points: [{ t, hits }] }` |
+| GET | `/api/links/:slug/hits` | Admin | Hourly hit series `?from=` `?to=` (ISO) → `{ points: [{ t, hits }] }` (admin UI shows a filled last-24h bar chart) |
 | PATCH | `/api/links/:slug` | Admin | Update fields including password / tags / folder / `maxHits` |
 | POST | `/api/links/:slug/status` | Admin | Body `{ "status": "active" \| "quarantined" }` |
 | DELETE | `/api/links/:slug` | Admin | Delete |
-| GET | `/api/links/:slug/qr` | Admin | PNG QR for short URL |
+| GET | `/api/links/:slug/qr` | Admin | PNG QR for short URL (admin UI: show/hide + download as `blink-{slug}.png`) |
 
 **Create body**
 
