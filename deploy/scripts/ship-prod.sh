@@ -33,15 +33,15 @@ fi
 IMAGE_TAG="${IMAGE_TAG:-${BLINK_IMAGE_TAG:-latest}}"
 
 echo "Bootstrapping GitHub Environment from .env.production …"
-bash "$ROOT/deploy/scripts/bootstrap-github-env.sh"
-
 if [[ "$DRY" -eq 1 ]]; then
+  bash "$ROOT/deploy/scripts/bootstrap-github-env.sh" --cf-only
   echo "Triggering Deploy workflow (cloudflare=dry-run, deploy=false) …"
   gh workflow run deploy.yml --repo "$REPO" \
     -f cloudflare=dry-run \
     -f deploy=false \
     -f image_tag="$IMAGE_TAG"
 else
+  bash "$ROOT/deploy/scripts/bootstrap-github-env.sh"
   echo "Triggering Deploy workflow (cloudflare=apply, deploy=true, tag=$IMAGE_TAG) …"
   gh workflow run deploy.yml --repo "$REPO" \
     -f cloudflare=apply \

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Ops scripts load `.env.production` via `load-env.sh` so passwords containing `$` do not fail under `set -u`
+- `ops:cf-dry-run` bootstraps with `--cf-only` (no `DEPLOY_*` required); Cloudflare dry-run job uses Environment `production` secrets
 
 ## [0.6.2] — 2026-10-12
 

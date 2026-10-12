@@ -32,6 +32,8 @@ jobs:
     name: Cloudflare dry-run
     runs-on: ubuntu-latest
     if: inputs.cloudflare == 'dry-run'
+    # Same Environment secrets as apply (CLOUDFLARE_* live under production)
+    environment: production
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

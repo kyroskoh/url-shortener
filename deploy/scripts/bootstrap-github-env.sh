@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 # Sync .env.production into GitHub Environment "production" (vars + secrets).
 # Never prints secret values. Requires: gh auth login, repo admin/secrets write.
+#
+# Usage:
+#   ./deploy/scripts/bootstrap-github-env.sh           # full (app + CF + deploy SSH)
+#   ./deploy/scripts/bootstrap-github-env.sh --cf-only # Cloudflare + app secrets; skip DEPLOY_*
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 ENV_FILE="${ENV_FILE:-$ROOT/.env.production}"
 ENV_NAME="${ENV_NAME:-production}"
+CF_ONLY=0
+if [[ "${1:-}" == "--cf-only" ]]; then
+  CF_ONLY=1
+fi
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "Missing $ENV_FILE — copy .env.production.example and fill values." >&2
@@ -50,9 +58,14 @@ require POSTGRES_PASSWORD
 require CLOUDFLARE_API_TOKEN
 require CLOUDFLARE_ZONE_ID
 require CLOUDFLARE_ORIGIN_IPV4
-require DEPLOY_HOST
-require DEPLOY_USER
-require DEPLOY_SSH_KEY
+
+if [[ "$CF_ONLY" -eq 0 ]]; then
+  require DEPLOY_HOST
+  require DEPLOY_USER
+  require DEPLOY_SSH_KEY
+else
+  echo "Cloudflare-only bootstrap: skipping required DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY"
+fi
 
 echo "Ensuring GitHub Environment '$ENV_NAME' on $REPO …"
 # Create environment if missing (idempotent)
@@ -107,6 +120,7 @@ set_secret CLOUDFLARE_API_TOKEN
 set_secret CLOUDFLARE_ZONE_ID
 set_secret CLOUDFLARE_ORIGIN_IPV4
 set_secret CLOUDFLARE_ORIGIN_IPV6
+# Optional / deploy (set_secret skips empty)
 set_secret DEPLOY_HOST
 set_secret DEPLOY_USER
 set_secret DEPLOY_SSH_KEY
