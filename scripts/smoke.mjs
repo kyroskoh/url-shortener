@@ -93,8 +93,40 @@ async function main() {
   const unauth = await fetch(`${base}/api/links`, { method: "GET" });
   assert(unauth.status === 401, "list without auth should 401");
 
+  const qSlug = `q${Date.now().toString(36)}`;
+  const qCreate = await req("/api/links", {
+    method: "POST",
+    body: JSON.stringify({
+      destination: "https://example.com/quarantine-me",
+      slug: qSlug,
+    }),
+  });
+  assert(qCreate.res.status === 201, "quarantine create failed");
+  const qSet = await req(`/api/links/${qSlug}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status: "quarantined" }),
+  });
+  assert(qSet.res.status === 200, "quarantine status failed");
+  const qRedir = await req(`/${qSlug}`);
+  assert(qRedir.res.status === 410, `quarantine redirect expected 410 got ${qRedir.res.status}`);
+  assert(
+    qRedir.text.includes("unavailable") || qRedir.text.includes("Unavailable"),
+    "quarantine branded page missing",
+  );
+  const qOn = await req(`/api/links/${qSlug}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status: "active" }),
+  });
+  assert(qOn.res.status === 200, "re-enable failed");
+  const qRedir2 = await req(`/${qSlug}`);
+  assert(
+    qRedir2.res.status === 302 || qRedir2.res.status === 301,
+    "re-enabled redirect failed",
+  );
+
   await req(`/api/links/${slug}`, { method: "DELETE" });
   await req(`/api/links/${expiredSlug}`, { method: "DELETE" });
+  await req(`/api/links/${qSlug}`, { method: "DELETE" });
 
   console.log("Smoke OK");
 }

@@ -6,7 +6,7 @@ import {
   requireAdmin,
   verifyPassword,
 } from "./auth.js";
-import { gonePage, notFoundPage } from "./branded-pages.js";
+import { gonePage, notFoundPage, quarantinedPage } from "./branded-pages.js";
 import { config, shortUrl } from "./config.js";
 import { queryClient } from "./db/client.js";
 import {
@@ -16,10 +16,15 @@ import {
   getLink,
   listLinks,
   resolveRedirect,
+  setLinkStatus,
   updateLink,
 } from "./links.js";
 import { rateLimit, redis } from "./redis.js";
-import { turnstileEnabled, verifyTurnstile } from "./turnstile.js";
+import {
+  turnstileKeysPresent,
+  turnstileRequiredForPublic,
+  verifyTurnstile,
+} from "./turnstile.js";
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("onRequest", async (request, reply) => {
@@ -54,7 +59,10 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     publicMode: config.publicMode,
     disableFrontend: config.disableFrontend,
     turnstileSiteKey: config.turnstileSiteKey || null,
-    turnstileRequired: turnstileEnabled() && config.publicMode,
+    turnstileForce: config.turnstileForce,
+    turnstileRequired: config.publicMode && turnstileRequiredForPublic(),
+    turnstileConfigured: turnstileKeysPresent(),
+    urlCheckProvider: config.urlCheckProvider,
   }));
 
   app.post<{ Body: { password?: string } }>("/auth/login", async (request, reply) => {
@@ -113,9 +121,12 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       const token =
         typeof body.turnstileToken === "string" ? body.turnstileToken : undefined;
       if (!(await verifyTurnstile(token, clientIp(request)))) {
+        const msg = config.turnstileForce && !turnstileKeysPresent()
+          ? "Turnstile is forced but keys are not configured"
+          : "Turnstile verification failed";
         return reply.code(400).send({
           error: "turnstile_failed",
-          message: "Turnstile verification failed",
+          message: msg,
         });
       }
     }
@@ -152,6 +163,10 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       notes: body.notes === undefined ? undefined : (body.notes as string | null),
       expiresAt:
         body.expiresAt === undefined ? undefined : (body.expiresAt as string | null),
+      status:
+        body.status === "active" || body.status === "quarantined"
+          ? body.status
+          : undefined,
     });
     if (!result.ok) {
       return reply
@@ -160,6 +175,27 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     }
     return { link: result.link };
   });
+
+  app.post<{ Params: { slug: string }; Body: { status?: string } }>(
+    "/links/:slug/status",
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const status = request.body?.status;
+      if (status !== "active" && status !== "quarantined") {
+        return reply.code(400).send({
+          error: "validation_error",
+          message: "Status must be active or quarantined",
+        });
+      }
+      const result = await setLinkStatus(request.params.slug, status);
+      if (!result.ok) {
+        return reply
+          .code(result.status)
+          .send({ error: result.error, message: result.message });
+      }
+      return { link: result.link };
+    },
+  );
 
   app.delete<{ Params: { slug: string } }>("/links/:slug", async (request, reply) => {
     if (!(await requireAdmin(request, reply))) return;
@@ -206,6 +242,10 @@ export async function handleRedirect(
   }
   if (result.status === "expired") {
     reply.code(410).type("text/html").send(gonePage());
+    return;
+  }
+  if (result.status === "quarantined") {
+    reply.code(410).type("text/html").send(quarantinedPage());
     return;
   }
   reply.redirect(result.destination, 302);

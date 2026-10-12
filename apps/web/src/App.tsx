@@ -62,7 +62,7 @@ export function App() {
   }, [refreshLinks]);
 
   useEffect(() => {
-    if (!config?.turnstileSiteKey || authed) return;
+    if (authed || !config?.turnstileRequired || !config.turnstileSiteKey) return;
     const existing = document.getElementById("cf-turnstile-script");
     if (!existing) {
       const s = document.createElement("script");
@@ -193,6 +193,22 @@ export function App() {
     await refreshLinks();
   }
 
+  async function setStatus(slug: string, status: "active" | "quarantined") {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await api.setStatus(slug, status);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      setInfo(status === "quarantined" ? "Link quarantined" : "Link re-enabled");
+      await refreshLinks();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const canCreate = authed || Boolean(config?.publicMode);
 
   return (
@@ -263,11 +279,25 @@ export function App() {
                 onChange={(e) => setExpiresAt(e.target.value)}
               />
             </label>
-            {!authed && config?.turnstileSiteKey && (
-              <div id="turnstile-box" aria-label="Turnstile" />
+            {!authed && config?.turnstileRequired && config.turnstileSiteKey && (
+              <div id="turnstile-box" aria-label="Cloudflare Turnstile challenge" />
+            )}
+            {!authed && config?.turnstileRequired && !config.turnstileSiteKey && (
+              <p className="msg error">
+                Public create requires Turnstile, but keys are not configured. Sign in
+                as admin or set BLINK_TURNSTILE_* keys.
+              </p>
             )}
             <div className="row">
-              <button type="submit" disabled={busy}>
+              <button
+                type="submit"
+                disabled={
+                  busy ||
+                  (!authed &&
+                    Boolean(config?.turnstileRequired) &&
+                    !config?.turnstileSiteKey)
+                }
+              >
                 Shorten
               </button>
             </div>
@@ -367,6 +397,10 @@ export function App() {
                     <p className="meta">{link.destination}</p>
                     {link.notes && <p className="meta">{link.notes}</p>}
                     <p className="meta">
+                      status: <strong>{link.status}</strong>
+                      {link.status === "quarantined" ? " (redirects blocked)" : ""}
+                    </p>
+                    <p className="meta">
                       {link.hits} hits
                       {link.createdAt
                         ? ` · created ${formatDateTimeBoth(link.createdAt)}`
@@ -390,6 +424,25 @@ export function App() {
                       >
                         Edit
                       </button>
+                      {link.status === "active" ? (
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={busy}
+                          onClick={() => void setStatus(link.slug, "quarantined")}
+                        >
+                          Quarantine
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={busy}
+                          onClick={() => void setStatus(link.slug, "active")}
+                        >
+                          Re-enable
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="danger"

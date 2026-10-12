@@ -1,14 +1,30 @@
 import { config } from "./config.js";
 
-export function turnstileEnabled(): boolean {
+export function turnstileKeysPresent(): boolean {
   return Boolean(config.turnstileSiteKey && config.turnstileSecretKey);
+}
+
+/** Required for public create when keys are set, or when FORCE is on. */
+export function turnstileRequiredForPublic(): boolean {
+  if (config.turnstileForce) return true;
+  return turnstileKeysPresent();
+}
+
+export function turnstileEnabled(): boolean {
+  return turnstileKeysPresent();
 }
 
 export async function verifyTurnstile(
   token: string | undefined,
   ip: string,
 ): Promise<boolean> {
-  if (!turnstileEnabled()) return true;
+  if (!turnstileRequiredForPublic()) return true;
+
+  if (config.turnstileForce && !turnstileKeysPresent()) {
+    // Force without keys: reject public creates (misconfiguration)
+    return false;
+  }
+
   if (!token) return false;
 
   const body = new URLSearchParams();

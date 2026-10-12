@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-10-12
+
+### Added
+
+- Phase 1 trust & abuse: link `status` (`active` / `quarantined`), Quarantine / Re-enable in admin UI
+- `POST /api/links/:slug/status` and status field on link update/list/CSV export
+- Optional URL check providers (`none` | `blocklist` | `http`) on create/edit
+- `BLINK_TURNSTILE_FORCE` for public create; fail closed when forced without keys
+- Branded “Link unavailable” page for quarantined slugs; Redis cache cleared on status change
+- [docs/ABUSE.md](docs/ABUSE.md) operator playbook; `deploy/blocklist.example.txt`
+- Smoke coverage for quarantine → 410 → re-enable → redirect
+
 ## [0.1.0] — 2026-10-12
 
 ### Added
@@ -26,4 +38,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed locked `drizzle-kit` (use `npx drizzle-kit@0.31.11 generate` when needed) to drop nested vulnerable `esbuild` / `@esbuild-kit` chain
 - `npm audit`: 0 vulnerabilities
 
+[0.2.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0
 [0.1.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0

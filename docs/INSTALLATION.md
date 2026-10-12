@@ -42,6 +42,10 @@ All app settings use the `BLINK_*` prefix. See [`.env.example`](../.env.example)
 | `BLINK_SESSION_SECRET` | — | Cookie signing |
 | `BLINK_TURNSTILE_SITE_KEY` | empty | Optional |
 | `BLINK_TURNSTILE_SECRET_KEY` | empty | Optional |
+| `BLINK_TURNSTILE_FORCE` | `false` | Require Turnstile on public create |
+| `BLINK_URL_CHECK_PROVIDER` | `none` | `none` \| `blocklist` \| `http` |
+| `BLINK_URL_CHECK_BLOCKLIST_PATH` | empty | Host blocklist file |
+| `BLINK_URL_CHECK_HTTP_URL` | empty | External URL check endpoint |
 | `DATABASE_URL` | compose default | Postgres |
 | `REDIS_URL` | compose default | Redis |
 
@@ -69,8 +73,9 @@ Trusts `CF-Connecting-IP` / `X-Forwarded-For` when behind Cloudflare.
 2. `BLINK_BASE_URL=https://layurl.com`
 3. Run origin with Compose; open 80/443 only as needed
 4. [CLOUDFLARE.md](CLOUDFLARE.md) — provision DNS, Full (strict), cache bypass
-5. Enable Turnstile if public mode is on
-6. Regular Postgres backups (Phase 4 scripts when implemented; until then `pg_dump`)
+5. Enable Turnstile if public mode is on; use `BLINK_TURNSTILE_FORCE=true` for public instances
+6. Consider URL blocklist (`deploy/blocklist.example.txt`) — see [ABUSE.md](ABUSE.md)
+7. Regular Postgres backups (Phase 4 scripts when implemented; until then `pg_dump`)
 
 ## Resource expectations
 

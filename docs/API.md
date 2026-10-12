@@ -40,9 +40,12 @@ Public create (when `BLINK_PUBLIC_MODE=true`) may omit auth; may require Turnsti
 | GET | `/api/links/export.csv` | Admin | CSV export |
 | POST | `/api/links` | Admin or public | Create `{ destination, slug?, notes?, expiresAt?, turnstileToken? }` |
 | GET | `/api/links/:slug` | Admin | Get one |
-| PATCH | `/api/links/:slug` | Admin | Update |
+| PATCH | `/api/links/:slug` | Admin | Update (destination, notes, expiresAt, status) |
+| POST | `/api/links/:slug/status` | Admin | Body `{ "status": "active" \| "quarantined" }` |
 | DELETE | `/api/links/:slug` | Admin | Delete |
 | GET | `/api/links/:slug/qr` | Admin or owner flow | PNG/SVG QR for short URL |
+
+Quarantined links keep the slug but redirects return branded **410 Link unavailable** (see [ABUSE.md](ABUSE.md)).
 
 Duplicate destination: create response may include `warnings: ["duplicate_destination"]` with existing slug(s).
 

@@ -62,3 +62,11 @@ export function notFoundPage(): string {
 export function gonePage(): string {
   return page("Expired", "Link expired", "This short link has expired and is no longer available.");
 }
+
+export function quarantinedPage(): string {
+  return page(
+    "Unavailable",
+    "Link unavailable",
+    "This short link has been disabled by an administrator and cannot be opened.",
+  );
+}

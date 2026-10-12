@@ -2,6 +2,7 @@ export type Link = {
   slug: string;
   destination: string;
   notes: string | null;
+  status: "active" | "quarantined";
   hits: number;
   lastHitAt: string | null;
   expiresAt: string | null;
@@ -16,7 +17,10 @@ export type Config = {
   publicMode: boolean;
   disableFrontend: boolean;
   turnstileSiteKey: string | null;
+  turnstileForce?: boolean;
   turnstileRequired: boolean;
+  turnstileConfigured?: boolean;
+  urlCheckProvider?: string;
 };
 
 async function req<T>(
@@ -72,6 +76,11 @@ export const api = {
   remove: (slug: string) =>
     req<{ ok: boolean }>(`/links/${encodeURIComponent(slug)}`, {
       method: "DELETE",
+    }),
+  setStatus: (slug: string, status: "active" | "quarantined") =>
+    req<{ link: Link }>(`/links/${encodeURIComponent(slug)}/status`, {
+      method: "POST",
+      body: JSON.stringify({ status }),
     }),
   exportUrl: "/api/links/export.csv",
   qrUrl: (slug: string) => `/api/links/${encodeURIComponent(slug)}/qr`,

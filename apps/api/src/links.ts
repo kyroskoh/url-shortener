@@ -2,10 +2,12 @@ import { desc, eq, ilike, or, sql } from "drizzle-orm";
 import {
   createLinkSchema,
   isReservedSlug,
+  linkStatusSchema,
   parseDestination,
   updateLinkSchema,
   type CreateLinkInput,
   type LinkDto,
+  type LinkStatus,
   type UpdateLinkInput,
 } from "@blink/shared";
 import { config, shortUrl } from "./config.js";
@@ -13,12 +15,15 @@ import { db } from "./db/client.js";
 import { links, type Link } from "./db/schema.js";
 import { cacheDel, cacheGet, cacheSet, bumpHit } from "./redis.js";
 import { randomSlug } from "./slug.js";
+import { checkDestinationUrl } from "./url-check.js";
 
 function toDto(row: Link): LinkDto {
+  const status = (row.status === "quarantined" ? "quarantined" : "active") as LinkStatus;
   return {
     slug: row.slug,
     destination: row.destination,
     notes: row.notes,
+    status,
     hits: Number(row.hits),
     lastHitAt: row.lastHitAt?.toISOString() ?? null,
     expiresAt: row.expiresAt?.toISOString() ?? null,
@@ -86,6 +91,16 @@ export async function createLink(input: CreateLinkInput): Promise<CreateResult> 
     return { ok: false, status: 400, error: "invalid_destination", message: dest.error };
   }
 
+  const urlCheck = await checkDestinationUrl(dest.url);
+  if (!urlCheck.ok) {
+    return {
+      ok: false,
+      status: 400,
+      error: "url_check_failed",
+      message: urlCheck.reason,
+    };
+  }
+
   let slug = parsed.data.slug?.trim() || randomSlug();
   if (isReservedSlug(slug)) {
     return {
@@ -126,6 +141,7 @@ export async function createLink(input: CreateLinkInput): Promise<CreateResult> 
       slug,
       destination: dest.url,
       notes: parsed.data.notes ?? null,
+      status: "active",
       expiresAt,
     })
     .returning();
@@ -158,15 +174,26 @@ export async function updateLink(
     if (!dest.ok) {
       return { ok: false, status: 400, error: "invalid_destination", message: dest.error };
     }
+    const urlCheck = await checkDestinationUrl(dest.url);
+    if (!urlCheck.ok) {
+      return {
+        ok: false,
+        status: 400,
+        error: "url_check_failed",
+        message: urlCheck.reason,
+      };
+    }
     destination = dest.url;
   }
+
+  const nextStatus = parsed.data.status ?? current.status;
 
   const [row] = await db
     .update(links)
     .set({
       destination,
-      notes:
-        parsed.data.notes === undefined ? undefined : parsed.data.notes,
+      notes: parsed.data.notes === undefined ? undefined : parsed.data.notes,
+      status: nextStatus,
       expiresAt:
         parsed.data.expiresAt === undefined
           ? undefined
@@ -182,6 +209,22 @@ export async function updateLink(
   return { ok: true, link: toDto(row), warnings: [] };
 }
 
+export async function setLinkStatus(
+  slug: string,
+  status: LinkStatus,
+): Promise<CreateResult> {
+  const parsed = linkStatusSchema.safeParse(status);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      status: 400,
+      error: "validation_error",
+      message: "Status must be active or quarantined",
+    };
+  }
+  return updateLink(slug, { status: parsed.data });
+}
+
 export async function deleteLink(slug: string): Promise<boolean> {
   const result = await db.delete(links).where(eq(links.slug, slug)).returning();
   await cacheDel(slug);
@@ -191,20 +234,25 @@ export async function deleteLink(slug: string): Promise<boolean> {
 export type ResolveResult =
   | { status: "ok"; destination: string }
   | { status: "missing" }
-  | { status: "expired" };
+  | { status: "expired" }
+  | { status: "quarantined" };
 
 export async function resolveRedirect(slug: string): Promise<ResolveResult> {
   if (isReservedSlug(slug)) return { status: "missing" };
+
+  const [row] = await db.select().from(links).where(eq(links.slug, slug)).limit(1);
+  if (!row) return { status: "missing" };
+  if (row.status === "quarantined") {
+    await cacheDel(slug);
+    return { status: "quarantined" };
+  }
+  if (isExpired(row)) return { status: "expired" };
 
   const cached = await cacheGet(slug);
   if (cached) {
     void bumpHit(slug);
     return { status: "ok", destination: cached };
   }
-
-  const [row] = await db.select().from(links).where(eq(links.slug, slug)).limit(1);
-  if (!row) return { status: "missing" };
-  if (isExpired(row)) return { status: "expired" };
 
   await cacheSet(slug, row.destination);
   void bumpHit(slug);
@@ -225,12 +273,14 @@ export async function flushHitCounters(counts: Map<string, number>): Promise<voi
 
 export async function exportCsv(): Promise<string> {
   const rows = await listLinks();
-  const header = "slug,destination,notes,hits,lastHitAt,expiresAt,createdAt,shortUrl";
+  const header =
+    "slug,destination,notes,status,hits,lastHitAt,expiresAt,createdAt,shortUrl";
   const lines = rows.map((r) =>
     [
       r.slug,
       csvEscape(r.destination),
       csvEscape(r.notes ?? ""),
+      r.status,
       r.hits,
       r.lastHitAt ?? "",
       r.expiresAt ?? "",

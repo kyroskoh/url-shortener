@@ -25,9 +25,10 @@ Default local admin password/API key come from `.env` (change before any public 
 - Timestamps with **MMM** month names, shown in **UTC and local** time
 - Password + API key auth · optional public create · Turnstile when configured
 - Reserved slugs · dangerous scheme blocking · branded 404/410
+- **Phase 1:** quarantine / re-enable · optional URL blocklist/HTTP check · Turnstile force-on · [abuse playbook](docs/ABUSE.md)
 - QR codes · CSV export · Docker Compose · Cloudflare DNS/SSL/cache provisioner
 
-Phases 1–4 (quarantine, UTM, webhooks, backups, …) are specified in [PRD.md](PRD.md).
+Phases 2–4 (UTM, webhooks, backups, …) are specified in [PRD.md](PRD.md).
 
 ## Stack
 
@@ -63,6 +64,7 @@ See [`.env.example`](.env.example) and [docs/INSTALLATION.md](docs/INSTALLATION.
 - [docs/INSTALLATION.md](docs/INSTALLATION.md)
 - [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)
 - [docs/API.md](docs/API.md)
+- [docs/ABUSE.md](docs/ABUSE.md)
 - [CHANGELOG.md](CHANGELOG.md)
 - [CONTRIBUTING.md](CONTRIBUTING.md)
 

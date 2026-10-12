@@ -27,6 +27,13 @@ export const config = {
   sessionSecret: process.env.BLINK_SESSION_SECRET ?? "dev-session-secret-change-me",
   turnstileSiteKey: process.env.BLINK_TURNSTILE_SITE_KEY ?? "",
   turnstileSecretKey: process.env.BLINK_TURNSTILE_SECRET_KEY ?? "",
+  turnstileForce: bool(process.env.BLINK_TURNSTILE_FORCE, false),
+  urlCheckProvider: (process.env.BLINK_URL_CHECK_PROVIDER ?? "none").toLowerCase() as
+    | "none"
+    | "blocklist"
+    | "http",
+  urlCheckBlocklistPath: process.env.BLINK_URL_CHECK_BLOCKLIST_PATH ?? "",
+  urlCheckHttpUrl: process.env.BLINK_URL_CHECK_HTTP_URL ?? "",
   databaseUrl:
     process.env.DATABASE_URL ?? "postgres://blink:blink@localhost:5432/blink",
   redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",

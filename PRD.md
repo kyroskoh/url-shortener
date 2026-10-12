@@ -12,7 +12,8 @@ Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url), rebuilt on N
 | **Host** | layurl.com |
 | **Repo** | url-shortener |
 | **Owner** | Operator / maintainer of this repository |
-| **Success evidence** | Phase 0 acceptance criteria below all pass; Phases 1–4 are implementable from this PRD without re-discovery |
+| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phases 2–4 remain implementable from this PRD |
+| **Current phase** | Phase 1 complete ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); next is **Phase 2 — Product depth** |
 
 ## Problem
 
@@ -22,8 +23,9 @@ Most URL shorteners are bloated, hard to self-host, or lack essentials (custom s
 
 ### In scope (this repository)
 
-- Phase 0 application (MVP) + documentation + Cloudflare provisioner
-- Full specifications for implementing Phase 1–4 product features (this document)
+- Phase 0 application (MVP) + documentation + Cloudflare provisioner — **done** ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0))
+- Phase 1 trust/abuse features — **done**
+- Full specifications for Phases 2–4 product features (this document; Phase 2 is next to implement)
 
 ### Non-goals (all phases)
 
@@ -49,13 +51,13 @@ Browser/API client → Cloudflare (DNS + TLS) → nginx → web (Vite/React) | a
 | `nginx` | Reverse proxy |
 | Cloudflare | Edge DNS/TLS for layurl.com |
 
-**Phase 0 data model:** `links` (slug, destination, notes, hits, last_hit_at, expires_at, created_at, updated_at). Auth via env-hashed admin password + API key (Argon2). Settings via env (`BLINK_*`).
+**Data model:** `links` (slug, destination, notes, hits, last_hit_at, expires_at, **status** `active`\|`quarantined`, created_at, updated_at). Auth via env-hashed admin password + API key (Argon2). Settings via env (`BLINK_*`).
 
-**Redirect path:** `GET /:slug` → Redis → Postgres miss-fill → `302`; missing → branded `404`; expired → branded `410`. Hits incremented without storing IP/UA. Rate limits key on `CF-Connecting-IP` when present.
+**Redirect path:** `GET /:slug` → Redis → Postgres miss-fill → `302`; missing → branded `404`; expired → branded `410`; **quarantined → branded unavailable page**. Hits incremented without storing IP/UA. Rate limits key on `CF-Connecting-IP` when present.
 
 ---
 
-## Phase 0 — MVP (build now)
+## Phase 0 — MVP (complete — v0.1.0)
 
 ### Goal
 
@@ -88,32 +90,33 @@ None (greenfield).
 
 ### Acceptance criteria
 
-- [ ] `docker compose up --build` serves UI via nginx on localhost
-- [ ] Admin can create/edit/delete/filter links; redirect is instant
-- [ ] Second redirect for same slug hits Redis cache
-- [ ] Reserved slug and dangerous scheme rejected
-- [ ] Branded 404 and 410 HTML pages render
-- [ ] Public create works without Turnstile when keys unset; fails without token when keys set
-- [ ] Rate limit returns `429` when threshold exceeded
-- [ ] Hit count updates without persisting IP/UA
-- [ ] `cloudflare-provision.mjs --dry-run` lists planned changes; API gaps print dashboard paths
-- [ ] README alone suffices for local run
+- [x] `docker compose up --build` serves UI via nginx on localhost
+- [x] Admin can create/edit/delete/filter links; redirect is instant
+- [x] Second redirect for same slug hits Redis cache
+- [x] Reserved slug and dangerous scheme rejected
+- [x] Branded 404 and 410 HTML pages render
+- [x] Public create works without Turnstile when keys unset; fails without token when keys set
+- [x] Rate limit returns `429` when threshold exceeded
+- [x] Hit count updates without persisting IP/UA
+- [x] `cloudflare-provision.mjs --dry-run` lists planned changes; API gaps print dashboard paths
+- [x] README alone suffices for local run
 
 ### Verification
 
-- Compose smoke script: create → redirect → reserved reject → expiry 410 → auth reject
+- Compose smoke script: create → redirect → reserved reject → expiry 410 → auth reject — **passed**
 - Manual: Turnstile keys set/unset behavior
 - Manual: provisioner dry-run with token (operator)
+- Release: [v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)
 
 ---
 
 ## Implementing Phase 1–4 product features
 
-The following sections are the **implementation specification** for Phases 1–4. A follow-on pass must satisfy each phase’s requirements and acceptance criteria without inventing scope.
+Phase **1** is the active implementation target. Phases **2–4** remain fully specified below for later passes without re-discovery.
 
 ---
 
-## Phase 1 — Trust and abuse
+## Phase 1 — Trust and abuse (complete)
 
 ### Goal
 
@@ -121,7 +124,7 @@ Reduce spam and malicious short links on a public layurl.com instance while keep
 
 ### Dependencies
 
-Phase 0 complete (links CRUD, public mode, Turnstile stub, quarantine column can be added via migration).
+Phase 0 complete ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)).
 
 ### In-scope features
 
@@ -143,11 +146,11 @@ Phase 0 complete (links CRUD, public mode, Turnstile stub, quarantine column can
 
 ### Acceptance criteria
 
-- [ ] Admin quarantines a link → public redirect no longer reaches destination
-- [ ] Admin re-enables → redirect works again; Redis cache invalidated
-- [ ] With blocklist containing a host, create to that host fails
-- [ ] Force Turnstile rejects public create without token
-- [ ] Abuse playbook exists and matches UI labels
+- [x] Admin quarantines a link → public redirect no longer reaches destination
+- [x] Admin re-enables → redirect works again; Redis cache invalidated
+- [x] With blocklist containing a host, create to that host fails
+- [x] Force Turnstile rejects public create without token (keys missing + FORCE, or missing token when keys set)
+- [x] Abuse playbook exists and matches UI labels ([docs/ABUSE.md](docs/ABUSE.md))
 
 ### Non-goals (Phase 1)
 
@@ -156,7 +159,8 @@ Phase 0 complete (links CRUD, public mode, Turnstile stub, quarantine column can
 
 ### Verification
 
-- API tests for status transitions; integration test for URL check hook with fixture blocklist
+- API / unit tests for URL blocklist; compose smoke includes quarantine → 410 → re-enable → 302
+- Manual: set `BLINK_TURNSTILE_FORCE=true` without keys and confirm public create fails
 
 ---
 

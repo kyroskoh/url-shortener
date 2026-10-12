@@ -41,14 +41,18 @@ export const createLinkSchema = z.object({
   turnstileToken: z.string().optional(),
 });
 
+export const linkStatusSchema = z.enum(["active", "quarantined"]);
+
 export const updateLinkSchema = z.object({
   destination: z.string().min(1).max(8192).optional(),
   notes: z.string().max(2000).optional().nullable(),
   expiresAt: z.string().datetime().optional().nullable(),
+  status: linkStatusSchema.optional(),
 });
 
 export type CreateLinkInput = z.infer<typeof createLinkSchema>;
 export type UpdateLinkInput = z.infer<typeof updateLinkSchema>;
+export type LinkStatus = z.infer<typeof linkStatusSchema>;
 
 export function isReservedSlug(slug: string): boolean {
   return RESERVED_SLUGS.has(slug.toLowerCase());
@@ -99,6 +103,7 @@ export type LinkDto = {
   slug: string;
   destination: string;
   notes: string | null;
+  status: LinkStatus;
   hits: number;
   lastHitAt: string | null;
   expiresAt: string | null;

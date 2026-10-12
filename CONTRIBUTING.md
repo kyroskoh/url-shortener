@@ -44,6 +44,7 @@ That invokes `npx drizzle-kit` (not a locked workspace dependency) so audit stay
 - Prefer small PRs with tests for API behavior
 - Never commit secrets (`.env`, Cloudflare tokens, passwords)
 - Keep `npm audit` at 0 when changing dependencies
+- Abuse / quarantine operator steps: [docs/ABUSE.md](docs/ABUSE.md)
 
 ## License
 

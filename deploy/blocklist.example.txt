@@ -1,0 +1,6 @@
+# Blink URL blocklist — one hostname per line (no scheme required)
+# Mount or copy and set BLINK_URL_CHECK_PROVIDER=blocklist
+# BLINK_URL_CHECK_BLOCKLIST_PATH=/path/to/blocklist.txt
+
+evil.example
+phish.test
