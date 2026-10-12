@@ -95,3 +95,5 @@ Client → Cloudflare (proxied DNS + edge TLS)
 Set `BLINK_BASE_URL=https://layurl.com`. Secrets and deploy: [GITHUB_SECRETS.md](GITHUB_SECRETS.md).
 
 Production edge on the origin is **host nginx** ([`deploy/nginx.blink-layurl.com.conf`](../deploy/nginx.blink-layurl.com.conf) → `zz-blink-layurl.com.conf`) → localhost API/web containers. Compose’s nginx service is not used in prod.
+
+For **Full (strict)**, origin must present TLS on 443. `install-host-nginx.sh` enables `listen 443 ssl` when it finds certs via `BLINK_SSL_CERT` / `BLINK_SSL_KEY`, Let’s Encrypt (`/etc/letsencrypt/live/layurl.com/`), `/etc/nginx/ssl/layurl.com.{pem,key}`, or an existing `ssl_certificate` already used by nginx on the host. Otherwise it installs HTTP-only on port 80 (fine for Cloudflare **Full**, not strict).
