@@ -1,5 +1,5 @@
 # Production overlay: GHCR images + host nginx (Compose nginx disabled).
-# API/web bind localhost only; install deploy/nginx.host.conf on the host.
+# API/web bind localhost only; install deploy/nginx.blink-layurl.com.conf on the host.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d

@@ -94,4 +94,4 @@ Client → Cloudflare (proxied DNS + edge TLS)
 
 Set `BLINK_BASE_URL=https://layurl.com`. Secrets and deploy: [GITHUB_SECRETS.md](GITHUB_SECRETS.md).
 
-Production edge on the origin is **host nginx** ([`deploy/nginx.host.conf`](../deploy/nginx.host.conf)) → localhost API/web containers. Compose’s nginx service is not used in prod.
+Production edge on the origin is **host nginx** ([`deploy/nginx.blink-layurl.com.conf`](../deploy/nginx.blink-layurl.com.conf) → `zz-blink-layurl.com.conf`) → localhost API/web containers. Compose’s nginx service is not used in prod.
