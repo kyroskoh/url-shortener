@@ -42,10 +42,40 @@ require() {
   fi
 }
 
-# Allow multiline key via path
-if [[ -n "${DEPLOY_SSH_KEY_FILE:-}" && -f "${DEPLOY_SSH_KEY_FILE}" ]]; then
-  DEPLOY_SSH_KEY="$(cat "$DEPLOY_SSH_KEY_FILE")"
-  export DEPLOY_SSH_KEY
+# Resolve DEPLOY_SSH_KEY_FILE across Windows / Git Bash / WSL path styles
+resolve_deploy_ssh_key_file() {
+  local p="${1:-}"
+  [[ -z "$p" ]] && return 1
+  local cand
+  local -a candidates=("$p")
+  # C:/Users/... or C:\Users\... → Git Bash /c/... and WSL /mnt/c/...
+  if [[ "$p" =~ ^[A-Za-z]:[\\/](.*)$ ]]; then
+    local rest="${BASH_REMATCH[1]}"
+    rest="${rest//\\//}"
+    local drive
+    drive="$(printf '%s' "${p:0:1}" | tr '[:upper:]' '[:lower:]')"
+    candidates+=("/${drive}/${rest}" "/mnt/${drive}/${rest}")
+  fi
+  for cand in "${candidates[@]}"; do
+    if [[ -f "$cand" ]]; then
+      printf '%s\n' "$cand"
+      return 0
+    fi
+  done
+  return 1
+}
+
+if [[ -n "${DEPLOY_SSH_KEY_FILE:-}" ]]; then
+  _ssh_key_path="$(resolve_deploy_ssh_key_file "$DEPLOY_SSH_KEY_FILE" || true)"
+  if [[ -n "${_ssh_key_path:-}" ]]; then
+    DEPLOY_SSH_KEY="$(cat "$_ssh_key_path")"
+    export DEPLOY_SSH_KEY
+    echo "Loaded DEPLOY_SSH_KEY from ${_ssh_key_path}"
+  else
+    echo "DEPLOY_SSH_KEY_FILE set but not readable: ${DEPLOY_SSH_KEY_FILE}" >&2
+    echo "  (Under WSL use /mnt/c/Users/... or keep C:/Users/... — both are tried.)" >&2
+  fi
+  unset _ssh_key_path
 fi
 
 require BLINK_PASSWORD
