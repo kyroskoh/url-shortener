@@ -32,7 +32,21 @@ GH_BIN="$(_gh_resolve)" || {
   return 1 2>/dev/null || exit 1
 }
 
-# Windows/WSL: provide a `gh` callable even when only gh.exe exists
+# WSL + Windows gh.exe often segfaults on gh api/secret — abort with clear guidance
+if [[ -f /proc/version ]] && grep -qiE 'microsoft|wsl' /proc/version 2>/dev/null; then
+  case "$GH_BIN" in
+    *.exe|/mnt/c/*|/mnt/d/*)
+      echo "ERROR: Running under WSL with Windows gh.exe causes segfaults." >&2
+      echo "  From PowerShell in the repo:" >&2
+      echo "    npm run ops:ship" >&2
+      echo "  (uses Git Bash + Windows gh). Or: .\\scripts\\ops.ps1 ship" >&2
+      echo "  Or install Linux gh in WSL:  sudo apt install gh && gh auth login" >&2
+      return 1 2>/dev/null || exit 1
+      ;;
+  esac
+fi
+
+# Windows/Git Bash: provide a `gh` callable even when only gh.exe exists
 gh() { "$GH_BIN" "$@"; }
 export -f gh
 export GH_BIN
