@@ -20,11 +20,8 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-if ! command -v gh >/dev/null 2>&1; then
-  echo "gh CLI required (https://cli.github.com/)" >&2
-  exit 1
-fi
-
+# shellcheck disable=SC1091
+source "$ROOT/deploy/scripts/ensure-gh.sh"
 # shellcheck disable=SC1091
 source "$ROOT/deploy/scripts/load-env.sh" "$ENV_FILE"
 

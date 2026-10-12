@@ -19,6 +19,8 @@ if [[ ! -f "$ENV_FILE" ]]; then
 fi
 
 # shellcheck disable=SC1091
+source "$ROOT/deploy/scripts/ensure-gh.sh"
+# shellcheck disable=SC1091
 source "$ROOT/deploy/scripts/load-env.sh" "$ENV_FILE"
 
 REPO="${GITHUB_REPO:-}"

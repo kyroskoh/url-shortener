@@ -9,6 +9,12 @@ param(
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 
+# Git Bash often lacks GitHub CLI on PATH
+$ghDir = "C:\Program Files\GitHub CLI"
+if (Test-Path "$ghDir\gh.exe") {
+  $env:PATH = "$ghDir;$env:PATH"
+}
+
 function Invoke-Bash([string]$Script, [string[]]$ScriptArgs = @()) {
   $bash = Get-Command bash -ErrorAction SilentlyContinue
   if (-not $bash) {
