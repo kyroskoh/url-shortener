@@ -1,0 +1,175 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      cloudflare:
+        description: Cloudflare provisioner mode
+        type: choice
+        options:
+          - skip
+          - dry-run
+          - apply
+        default: dry-run
+      deploy:
+        description: Deploy Compose stack to origin via SSH
+        type: boolean
+        default: false
+      image_tag:
+        description: GHCR image tag (e.g. v0.6.0 or latest)
+        type: string
+        default: latest
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  cloudflare-dry-run:
+    name: Cloudflare dry-run
+    runs-on: ubuntu-latest
+    if: inputs.cloudflare == 'dry-run'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Run provisioner dry-run
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_ORIGIN_IPV4: ${{ secrets.CLOUDFLARE_ORIGIN_IPV4 }}
+          CLOUDFLARE_ORIGIN_IPV6: ${{ secrets.CLOUDFLARE_ORIGIN_IPV6 }}
+          CLOUDFLARE_MANAGE_WWW: ${{ vars.CLOUDFLARE_MANAGE_WWW || 'true' }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ZONE_ID" ]; then
+            echo "CLOUDFLARE_API_TOKEN / CLOUDFLARE_ZONE_ID not set — skipping"
+            exit 0
+          fi
+          node deploy/scripts/cloudflare-provision.mjs --dry-run
+
+  cloudflare-apply:
+    name: Cloudflare apply
+    runs-on: ubuntu-latest
+    if: inputs.cloudflare == 'apply'
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Run provisioner apply
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_ORIGIN_IPV4: ${{ secrets.CLOUDFLARE_ORIGIN_IPV4 }}
+          CLOUDFLARE_ORIGIN_IPV6: ${{ secrets.CLOUDFLARE_ORIGIN_IPV6 }}
+          CLOUDFLARE_MANAGE_WWW: ${{ vars.CLOUDFLARE_MANAGE_WWW || 'true' }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ZONE_ID" ]; then
+            echo "CLOUDFLARE_API_TOKEN / CLOUDFLARE_ZONE_ID required for apply" >&2
+            exit 1
+          fi
+          node deploy/scripts/cloudflare-provision.mjs --apply
+
+  deploy:
+    name: Deploy Compose (GHCR)
+    runs-on: ubuntu-latest
+    if: inputs.deploy
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check deploy secrets
+        id: gate
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ] || [ -z "$DEPLOY_SSH_KEY" ]; then
+            echo "DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY not set — skipping deploy"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Render .env from secrets
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          FORCE: "1"
+          BLINK_PASSWORD: ${{ secrets.BLINK_PASSWORD }}
+          BLINK_API_KEY: ${{ secrets.BLINK_API_KEY }}
+          BLINK_SESSION_SECRET: ${{ secrets.BLINK_SESSION_SECRET }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          BLINK_TURNSTILE_SITE_KEY: ${{ secrets.BLINK_TURNSTILE_SITE_KEY }}
+          BLINK_TURNSTILE_SECRET_KEY: ${{ secrets.BLINK_TURNSTILE_SECRET_KEY }}
+          BLINK_BASE_URL: ${{ vars.BLINK_BASE_URL || 'https://layurl.com' }}
+          BLINK_PUBLIC_MODE: ${{ vars.BLINK_PUBLIC_MODE || 'false' }}
+          BLINK_TURNSTILE_FORCE: ${{ vars.BLINK_TURNSTILE_FORCE || 'false' }}
+          BLINK_IMAGE_TAG: ${{ inputs.image_tag }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_ORIGIN_IPV4: ${{ secrets.CLOUDFLARE_ORIGIN_IPV4 }}
+          CLOUDFLARE_ORIGIN_IPV6: ${{ secrets.CLOUDFLARE_ORIGIN_IPV6 }}
+        run: |
+          chmod +x deploy/scripts/render-env.sh
+          OWNER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          export GHCR_OWNER="$OWNER"
+          ./deploy/scripts/render-env.sh .env.deploy
+      - name: Configure SSH
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+      - name: Sync and compose up
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '~/url-shortener' }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          OWNER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          TOKEN="${GHCR_PULL_TOKEN:-$GITHUB_TOKEN}"
+          REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
+          ssh "$REMOTE" "mkdir -p ${DEPLOY_PATH}/deploy"
+          scp .env.deploy "${REMOTE}:${DEPLOY_PATH}/.env"
+          scp docker-compose.yml docker-compose.prod.yml "${REMOTE}:${DEPLOY_PATH}/"
+          scp deploy/nginx.conf "${REMOTE}:${DEPLOY_PATH}/deploy/"
+          ssh "$REMOTE" "set -e
+            cd ${DEPLOY_PATH}
+            echo '${TOKEN}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+            export BLINK_IMAGE_TAG='${IMAGE_TAG}'
+            export GHCR_OWNER='${OWNER}'
+            set -a
+            . ./.env
+            set +a
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+          "
+      - name: Post-deploy health check
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
+          BLINK_BASE_URL: ${{ vars.BLINK_BASE_URL || 'https://layurl.com' }}
+        run: |
+          URL="${HEALTHCHECK_URL:-${BLINK_BASE_URL}/api/ready}"
+          echo "Checking $URL"
+          for i in $(seq 1 30); do
+            if curl -sf "$URL" >/dev/null; then
+              echo "healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Health check failed: $URL" >&2
+          exit 1

@@ -12,8 +12,8 @@ Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url), rebuilt on N
 | **Host** | layurl.com |
 | **Repo** | url-shortener |
 | **Owner** | Operator / maintainer of this repository |
-| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phase 2 ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0), patch [v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)); Phase 3 ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0), patches [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1), [v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2)); Phase 4 ([v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0)) |
-| **Current phase** | Phase 4 complete ([v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0)); roadmap Phases 0–4 shipped — see [ENHANCEMENT.md](ENHANCEMENT.md) for next ideas |
+| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phase 2 ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0), patch [v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)); Phase 3 ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0), patches [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1), [v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2)); Phase 4 ([v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0)); trust/ops harden ([v0.6.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0)) |
+| **Current phase** | Phase 4 complete; **v0.6.0** hardens Phase 1 + Cloudflare + Secrets-backed deploy — see [ENHANCEMENT.md](ENHANCEMENT.md) for next ideas |
 
 ## Problem
 
@@ -28,6 +28,7 @@ Most URL shorteners are bloated, hard to self-host, or lack essentials (custom s
 - Phase 2 product depth — **done**
 - Phase 3 analytics and integrations — **done** ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0), patches [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1), [v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2))
 - Phase 4 ops and scale — **done** ([v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0))
+- Phase 1 + Cloudflare harden + Secrets deploy — **done** ([v0.6.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0))
 
 ### Non-goals (all phases)
 
@@ -161,8 +162,9 @@ Phase 0 complete ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/ta
 
 ### Verification
 
-- API / unit tests for URL blocklist; compose smoke includes quarantine → 410 → re-enable → 302
+- API / unit tests for URL blocklist (exact + parent domain) and HTTP provider (mock fetch); compose smoke includes quarantine → 410 → re-enable → 302
 - Manual: set `BLINK_TURNSTILE_FORCE=true` without keys and confirm public create fails
+- Hardened in [v0.6.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0): Turnstile token gate UX, quarantine status filter/`Cache-Control: no-store`, HTTP check timeout
 
 ---
 
@@ -320,15 +322,17 @@ Phases 0–3 for full E2E surface; Phase 0 sufficient for backups/CI of MVP.
 - Restore drill: create → backup → delete → restore → 302 — **passed** (local)
 - Unit + typecheck — **passed**; Playwright E2E against Compose — **passed**
 - CI / GHCR: workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml); images publish on `v*` tags
-- Release: [v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0)
+- Release: [v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0); harden [v0.6.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0)
 
 ---
 
 ## Cloudflare live ops (Phase 0 requirement)
 
+Verified / hardened in [v0.6.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0) (www AAAA, provisioner tests, Actions + [docs/GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md)).
+
 ### Automate via API (`deploy/scripts/cloudflare-provision.mjs`)
 
-- Upsert proxied DNS for apex/`www`
+- Upsert proxied DNS for apex/`www` (`A` and `AAAA` when IPv6 set)
 - Zone SSL **Full (strict)**, Always Use HTTPS, min TLS 1.2
 - Cache rule: do not edge-cache short-link redirects
 - `--dry-run` then `--apply`; refuse without `CLOUDFLARE_API_TOKEN`

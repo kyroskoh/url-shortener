@@ -6,6 +6,14 @@
  *   node deploy/scripts/cloudflare-provision.mjs --apply
  */
 
+import {
+  CACHE_BYPASS_DESCRIPTION,
+  CACHE_BYPASS_EXPRESSION,
+  missingCredentials,
+  plannedDnsRecords,
+  plannedZoneSettings,
+} from "./cloudflare-lib.mjs";
+
 const APPLY = process.argv.includes("--apply");
 const DRY = !APPLY || process.argv.includes("--dry-run");
 
@@ -117,14 +125,9 @@ async function setZoneSetting(key, value) {
   });
 }
 
-/**
- * Cache bypass for HTML/dynamic short links.
- * Expression: bypass cache when URI path is a single segment (typical slug).
- */
 async function ensureCacheBypassRule() {
-  const description = "Blink — bypass cache for short-link redirects";
-  const expression =
-    '(http.request.uri.path matches "^/[A-Za-z0-9_-]+$" and not starts_with(http.request.uri.path, "/api"))';
+  const description = CACHE_BYPASS_DESCRIPTION;
+  const expression = CACHE_BYPASS_EXPRESSION;
   const action = "bypass";
 
   if (DRY) {
@@ -134,7 +137,6 @@ async function ensureCacheBypassRule() {
     return { ok: true, dry: true };
   }
 
-  // Prefer Rulesets API (http_request_cache_settings)
   const entry = await cf(
     `/zones/${zoneId}/rulesets/phases/http_request_cache_settings/entrypoint`,
   );
@@ -166,24 +168,23 @@ async function ensureCacheBypassRule() {
     body: { rules },
   });
   if (!update.ok) {
-    printManual(`Failed to update cache ruleset: ${JSON.stringify(update.json?.errors ?? update.json)}`);
+    printManual(
+      `Failed to update cache ruleset: ${JSON.stringify(update.json?.errors ?? update.json)}`,
+    );
   }
   return update;
 }
 
 async function main() {
   console.log(`Blink Cloudflare provisioner (${APPLY ? "APPLY" : "DRY-RUN"})`);
-  console.log("Cache expression target: single-segment paths like /{slug} (not /api/*)");
+  console.log(
+    "Cache expression target: single-segment paths like /{slug} (not /api/*)",
+  );
 
-  if (!token || !zoneId) {
-    console.error("Missing CLOUDFLARE_API_TOKEN or CLOUDFLARE_ZONE_ID");
+  const missing = missingCredentials({ token, zoneId, ipv4, ipv6 });
+  if (missing.length) {
+    console.error(`Missing ${missing.join(", ")}`);
     printManual("Credentials missing — cannot call API");
-    process.exit(1);
-  }
-
-  if (!ipv4 && !ipv6) {
-    console.error("Set CLOUDFLARE_ORIGIN_IPV4 and/or CLOUDFLARE_ORIGIN_IPV6");
-    printManual("Origin IP unknown");
     process.exit(1);
   }
 
@@ -197,25 +198,18 @@ async function main() {
   console.log(`Zone: ${zoneName} (${zoneId})`);
 
   const failures = [];
-
-  if (ipv4) {
-    const r = await upsertDns("A", zoneName, ipv4);
-    if (!r.ok) failures.push(["DNS A apex", r]);
-    if (manageWww) {
-      const w = await upsertDns("A", `www.${zoneName}`, ipv4);
-      if (!w.ok) failures.push(["DNS A www", w]);
-    }
-  }
-  if (ipv6) {
-    const r = await upsertDns("AAAA", zoneName, ipv6);
-    if (!r.ok) failures.push(["DNS AAAA apex", r]);
+  const dnsPlan = plannedDnsRecords({
+    zoneName,
+    ipv4,
+    ipv6,
+    manageWww,
+  });
+  for (const rec of dnsPlan) {
+    const r = await upsertDns(rec.type, rec.name, rec.content);
+    if (!r.ok) failures.push([`DNS ${rec.type} ${rec.name}`, r]);
   }
 
-  for (const [key, value] of [
-    ["ssl", "strict"],
-    ["always_use_https", "on"],
-    ["min_tls_version", "1.2"],
-  ]) {
+  for (const [key, value] of plannedZoneSettings()) {
     const r = await setZoneSetting(key, value);
     if (!r.ok) failures.push([`setting ${key}`, r]);
   }
@@ -232,7 +226,9 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(DRY ? "\nDry-run complete. Re-run with --apply to write." : "\nApply complete.");
+  console.log(
+    DRY ? "\nDry-run complete. Re-run with --apply to write." : "\nApply complete.",
+  );
   console.log("Remaining operator-only gaps (always review):");
   printManual();
 }

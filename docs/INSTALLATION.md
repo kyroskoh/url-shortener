@@ -65,8 +65,9 @@ All app settings use the `BLINK_*` prefix. See [`.env.example`](../.env.example)
 | `BLINK_TURNSTILE_SECRET_KEY` | empty | Optional |
 | `BLINK_TURNSTILE_FORCE` | `false` | Require Turnstile on public create |
 | `BLINK_URL_CHECK_PROVIDER` | `none` | `none` \| `blocklist` \| `http` |
-| `BLINK_URL_CHECK_BLOCKLIST_PATH` | empty | Host blocklist file |
+| `BLINK_URL_CHECK_BLOCKLIST_PATH` | empty | Host blocklist file (matches host + subdomains) |
 | `BLINK_URL_CHECK_HTTP_URL` | empty | External URL check endpoint |
+| `BLINK_URL_CHECK_HTTP_TIMEOUT_MS` | `5000` | HTTP provider timeout (fail closed) |
 | `BLINK_PREVIEW_TTL_SEC` | `3600` | Destination preview Redis TTL |
 | `BLINK_WEBHOOK_URL` | empty | Hit webhook POST URL (off when empty) |
 | `BLINK_WEBHOOK_SECRET` | empty | HMAC secret for `X-Blink-Signature` |
@@ -75,7 +76,7 @@ All app settings use the `BLINK_*` prefix. See [`.env.example`](../.env.example)
 | `DATABASE_URL` | compose default | Postgres |
 | `REDIS_URL` | compose default | Redis |
 
-Cloudflare provisioner vars: see [CLOUDFLARE.md](CLOUDFLARE.md).
+Cloudflare provisioner vars: see [CLOUDFLARE.md](CLOUDFLARE.md). Production secrets and Deploy workflow: [GITHUB_SECRETS.md](GITHUB_SECRETS.md).
 
 ## Migrations
 
@@ -134,13 +135,14 @@ Trusts `CF-Connecting-IP` / `X-Forwarded-For` when behind Cloudflare.
 
 ## Production checklist
 
-1. Strong `BLINK_PASSWORD`, `BLINK_API_KEY`, `BLINK_SESSION_SECRET`
-2. `BLINK_BASE_URL=https://layurl.com`
-3. Run origin with Compose; open 80/443 only as needed
-4. [CLOUDFLARE.md](CLOUDFLARE.md) — provision DNS, Full (strict), cache bypass
+1. Configure [GitHub Secrets](GITHUB_SECRETS.md) (`BLINK_*`, `POSTGRES_PASSWORD`, Cloudflare, deploy SSH)
+2. `BLINK_BASE_URL=https://layurl.com` (Environment variable)
+3. Publish images via `v*` tag CI → GHCR; deploy with Actions **Deploy** (`docker-compose.prod.yml`) or pull on origin
+4. [CLOUDFLARE.md](CLOUDFLARE.md) — dry-run then apply (DNS, Full strict, cache bypass)
 5. Enable Turnstile if public mode is on; use `BLINK_TURNSTILE_FORCE=true` for public instances
 6. Consider URL blocklist (`deploy/blocklist.example.txt`) — see [ABUSE.md](ABUSE.md)
 7. Regular Postgres backups — see [Postgres backups](#postgres-backups) (`./deploy/scripts/backup-postgres.sh`)
+8. Confirm post-deploy `GET /api/ready` (Actions health check)
 
 ## Resource expectations
 

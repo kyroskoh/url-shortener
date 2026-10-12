@@ -578,11 +578,19 @@ export async function handleRedirect(
     return;
   }
   if (result.status === "expired") {
-    reply.code(410).type("text/html").send(gonePage());
+    reply
+      .code(410)
+      .header("Cache-Control", "no-store, no-cache, must-revalidate")
+      .type("text/html")
+      .send(gonePage());
     return;
   }
   if (result.status === "quarantined") {
-    reply.code(410).type("text/html").send(quarantinedPage());
+    reply
+      .code(410)
+      .header("Cache-Control", "no-store, no-cache, must-revalidate")
+      .type("text/html")
+      .send(quarantinedPage());
     return;
   }
   if (result.status === "password_required") {

@@ -20,6 +20,12 @@ function httpUrl(): string {
   return process.env.BLINK_URL_CHECK_HTTP_URL ?? "";
 }
 
+function httpTimeoutMs(): number {
+  const raw = Number(process.env.BLINK_URL_CHECK_HTTP_TIMEOUT_MS ?? "5000");
+  if (!Number.isFinite(raw) || raw < 100) return 5000;
+  return Math.min(raw, 60_000);
+}
+
 let blocklistCache: { path: string; hosts: Set<string>; loadedAt: number } | null =
   null;
 
@@ -43,7 +49,8 @@ function loadBlocklist(): Set<string> {
       .split(/\r?\n/)
       .map((l) => l.trim().toLowerCase())
       .filter((l) => l && !l.startsWith("#"))
-      .map((l) => l.replace(/^https?:\/\//, "").split("/")[0]),
+      .map((l) => l.replace(/^https?:\/\//, "").split("/")[0] ?? "")
+      .filter(Boolean),
   );
   blocklistCache = { path, hosts, loadedAt: now };
   return hosts;
@@ -55,6 +62,25 @@ function hostnameOf(destination: string): string | null {
   } catch {
     return null;
   }
+}
+
+function isIpLiteral(host: string): boolean {
+  // IPv4 or bracket-stripped IPv6
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return true;
+  if (host.includes(":")) return true;
+  return false;
+}
+
+/** True if host equals a blocked entry or is a subdomain of one (not for IP literals). */
+export function hostMatchesBlocklist(host: string, blocked: Set<string>): boolean {
+  const h = host.toLowerCase();
+  if (blocked.has(h)) return true;
+  if (isIpLiteral(h)) return false;
+  for (const entry of blocked) {
+    if (!entry || isIpLiteral(entry)) continue;
+    if (h === entry || h.endsWith(`.${entry}`)) return true;
+  }
+  return false;
 }
 
 /** Check destination against configured provider before create/edit. */
@@ -75,7 +101,7 @@ export async function checkDestinationUrl(
       };
     }
     const list = loadBlocklist();
-    if (host && list.has(host)) {
+    if (host && hostMatchesBlocklist(host, list)) {
       return { ok: false, reason: `Destination host is blocklisted: ${host}` };
     }
     return { ok: true };
@@ -88,11 +114,13 @@ export async function checkDestinationUrl(
         reason: "HTTP URL check enabled but BLINK_URL_CHECK_HTTP_URL is empty",
       };
     }
+    const timeoutMs = httpTimeoutMs();
     try {
       const res = await fetch(httpUrl(), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ url: destination, host }),
+        signal: AbortSignal.timeout(timeoutMs),
       });
       if (!res.ok) {
         return { ok: false, reason: `URL check provider returned HTTP ${res.status}` };
@@ -111,6 +139,13 @@ export async function checkDestinationUrl(
       }
       return { ok: true };
     } catch (err) {
+      const name = err instanceof Error ? err.name : "";
+      if (name === "TimeoutError" || name === "AbortError") {
+        return {
+          ok: false,
+          reason: `URL check provider timed out after ${timeoutMs}ms`,
+        };
+      }
       return {
         ok: false,
         reason: `URL check provider request failed: ${err instanceof Error ? err.message : String(err)}`,

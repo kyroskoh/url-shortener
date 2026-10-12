@@ -1,6 +1,6 @@
 # Enhancements backlog
 
-Ideas beyond the shipped roadmap. Phases 0–4 (through **[v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0)**) are complete; see [PRD.md](PRD.md) / [CHANGELOG.md](CHANGELOG.md).
+Ideas beyond the shipped roadmap. Phases 0–4 complete; trust/ops hardening through **[v0.6.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0)**. See [PRD.md](PRD.md) / [CHANGELOG.md](CHANGELOG.md).
 
 ## Shipped in Phase 3 (not open)
 
@@ -25,6 +25,12 @@ Ideas beyond the shipped roadmap. Phases 0–4 (through **[v0.5.0](https://githu
 | Candidate | Soft pause (disable redirects without abuse “quarantine” label) |
 | Candidate | Duplicate-destination policy: optional block (not only warn) |
 | Candidate | Docker Hub mirror of GHCR images |
+| Candidate | Cloudflare cache purge helper (Actions input / script after quarantine or deploy) |
+| Candidate | `BLINK_ABUSE_CONTACT` on “Link unavailable” page + ABUSE.md report path |
+| Candidate | Deploy rollback runbook automation (workflow `image_tag` → prior `v*` / GHCR tag) |
+| Candidate | First-party Google Safe Browsing client (generic HTTP URL-check provider remains) |
+| Candidate | www → apex Cloudflare Bulk Redirect / rule |
+| Candidate | Origin CA issuance automation (beyond [CLOUDFLARE.md](docs/CLOUDFLARE.md) manual gaps) |
 
 ## Deferred / won’t do (for now)
 

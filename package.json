@@ -1,7 +1,7 @@
 {
   "name": "url-shortener",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Blink — URL shortener for layurl.com",
   "workspaces": [
     "apps/*",
@@ -11,10 +11,12 @@
     "dev": "npm run dev -w @blink/api & npm run dev -w @blink/web",
     "build": "npm run build -w @blink/shared && npm run build -w @blink/client && npm run build -w @blink/cli && npm run build -w @blink/api && npm run build -w @blink/web",
     "lint": "npm run lint -w @blink/api --if-present && npm run lint -w @blink/web --if-present",
-    "typecheck": "npm run typecheck -w @blink/shared && npm run typecheck -w @blink/client && npm run typecheck -w @blink/cli && npm run typecheck -w @blink/api && npm run typecheck -w @blink/web",
-    "test": "npm run test -w @blink/api",
+    "typecheck": "npm run build -w @blink/shared && npm run build -w @blink/client && npm run typecheck -w @blink/cli && npm run typecheck -w @blink/api && npm run typecheck -w @blink/web",
+    "test": "npm run test -w @blink/api && node --test deploy/scripts/cloudflare-lib.test.mjs",
     "test:e2e": "playwright test",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "cloudflare:dry-run": "node deploy/scripts/cloudflare-provision.mjs --dry-run",
+    "cloudflare:apply": "node deploy/scripts/cloudflare-provision.mjs --apply"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0"

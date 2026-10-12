@@ -1,0 +1,27 @@
+# Production overlay: pull GHCR images; secrets via .env from GitHub Actions render-env.
+# Usage on origin:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  postgres:
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-blink}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-blink}
+
+  api:
+    build: !reset null
+    image: ghcr.io/${GHCR_OWNER:-kyroskoh}/blink-api:${BLINK_IMAGE_TAG:-latest}
+    pull_policy: always
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://blink:${POSTGRES_PASSWORD}@postgres:5432/blink}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      PORT: "3000"
+
+  web:
+    build: !reset null
+    image: ghcr.io/${GHCR_OWNER:-kyroskoh}/blink-web:${BLINK_IMAGE_TAG:-latest}
+    pull_policy: always

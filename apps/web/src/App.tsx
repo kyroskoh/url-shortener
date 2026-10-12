@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { api, type Config, type Folder, type Link, type Tag } from "./api";
 import { formatDateTimeBoth } from "./datetime";
 
@@ -7,7 +7,12 @@ declare global {
     turnstile?: {
       render: (
         el: HTMLElement,
-        opts: { sitekey: string; callback: (token: string) => void },
+        opts: {
+          sitekey: string;
+          callback: (token: string) => void;
+          "expired-callback"?: () => void;
+          "error-callback"?: () => void;
+        },
       ) => string;
       reset: (id?: string) => void;
     };
@@ -35,7 +40,11 @@ export function App() {
   const [filter, setFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [folderFilter, setFolderFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "quarantined">(
+    "all",
+  );
   const [links, setLinks] = useState<Link[]>([]);
+  const turnstileWidgetId = useRef<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -180,6 +189,17 @@ export function App() {
     }
   }, [config, authed]);
 
+  function resetTurnstile() {
+    setTurnstileToken("");
+    if (turnstileWidgetId.current && window.turnstile) {
+      try {
+        window.turnstile.reset(turnstileWidgetId.current);
+      } catch {
+        /* widget may already be gone */
+      }
+    }
+  }
+
   function renderTurnstile(sitekey: string) {
     const el = document.getElementById("turnstile-box");
     if (!el || !window.turnstile) {
@@ -187,9 +207,11 @@ export function App() {
       return;
     }
     el.innerHTML = "";
-    window.turnstile.render(el, {
+    turnstileWidgetId.current = window.turnstile.render(el, {
       sitekey,
       callback: (token) => setTurnstileToken(token),
+      "expired-callback": () => setTurnstileToken(""),
+      "error-callback": () => setTurnstileToken(""),
     });
   }
 
@@ -264,12 +286,14 @@ export function App() {
       const res = await api.create(body);
       if (res.error) {
         setError(res.error);
+        if (!authed && config?.turnstileRequired) resetTurnstile();
         return;
       }
       if (res.data) {
         setCreated(res.data.link);
         setWarnings(res.data.warnings ?? []);
         resetCreateForm();
+        if (!authed && config?.turnstileRequired) resetTurnstile();
         setInfo("Short link created");
         await refreshLinks();
         await refreshMeta();
@@ -617,7 +641,12 @@ export function App() {
             </details>
 
             {!authed && config?.turnstileRequired && config.turnstileSiteKey && (
-              <div id="turnstile-box" aria-label="Cloudflare Turnstile challenge" />
+              <div className="turnstile-wrap">
+                {(config.turnstileForce || config.turnstileRequired) && (
+                  <p className="meta">Public create requires verification.</p>
+                )}
+                <div id="turnstile-box" aria-label="Cloudflare Turnstile challenge" />
+              </div>
             )}
             {!authed && config?.turnstileRequired && !config.turnstileSiteKey && (
               <p className="msg error">
@@ -632,7 +661,7 @@ export function App() {
                   busy ||
                   (!authed &&
                     Boolean(config?.turnstileRequired) &&
-                    !config?.turnstileSiteKey)
+                    (!config?.turnstileSiteKey || !turnstileToken))
                 }
               >
                 Shorten
@@ -772,6 +801,18 @@ export function App() {
                 </option>
               ))}
             </select>
+            <select
+              value={statusFilter}
+              onChange={(e) =>
+                setStatusFilter(e.target.value as "all" | "active" | "quarantined")
+              }
+              aria-label="Status filter"
+              style={{ maxWidth: 160 }}
+            >
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="quarantined">Quarantined</option>
+            </select>
           </div>
 
           {preview && (
@@ -829,7 +870,11 @@ export function App() {
           )}
 
           <div className="list">
-            {links.map((link) => (
+            {links
+              .filter(
+                (link) => statusFilter === "all" || link.status === statusFilter,
+              )
+              .map((link) => (
               <article className="item" key={link.slug}>
                 {editing?.slug === link.slug ? (
                   <form className="form-grid" onSubmit={(e) => void saveEdit(e)}>
@@ -934,8 +979,17 @@ export function App() {
                     <p className="meta">{link.destination}</p>
                     {link.notes && <p className="meta">{link.notes}</p>}
                     <p className="meta">
-                      status: <strong>{link.status}</strong>
-                      {link.status === "quarantined" ? " (redirects blocked)" : ""}
+                      <span
+                        className={
+                          link.status === "quarantined"
+                            ? "status-badge status-quarantined"
+                            : "status-badge status-active"
+                        }
+                      >
+                        {link.status === "quarantined"
+                          ? "quarantined · redirects blocked"
+                          : "active"}
+                      </span>
                       {link.hasPassword ? " · password" : ""}
                       {link.oneTime ? " · one-time" : ""}
                       {link.maxHits != null ? ` · max ${link.maxHits}` : ""}
@@ -1038,6 +1092,11 @@ export function App() {
               </article>
             ))}
             {!links.length && <p className="meta">No links yet.</p>}
+            {links.length > 0 &&
+              statusFilter !== "all" &&
+              !links.some((l) => l.status === statusFilter) && (
+                <p className="meta">No links match this status filter.</p>
+              )}
           </div>
           {nextCursor && (
             <div className="row" style={{ marginTop: "1rem" }}>

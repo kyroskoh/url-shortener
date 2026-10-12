@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] — 2026-10-12
+
+### Added
+
+- Secrets-backed production path: [docs/GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md), `deploy/scripts/render-env.sh`, `docker-compose.prod.yml` (GHCR images + `POSTGRES_PASSWORD`)
+- GitHub Actions **Deploy** workflow: Cloudflare dry-run/apply, SSH Compose deploy, post-deploy `/api/ready` health check; `apply`/deploy gated on Environment `production`
+- Cloudflare provisioner helpers + unit tests (`deploy/scripts/cloudflare-lib.mjs`); npm `cloudflare:dry-run` / `cloudflare:apply`
+- Admin status filter and quarantined badge; Turnstile token gate, expired/error callbacks, reset after failed create
+- URL check: parent-domain blocklist matching, HTTP provider timeout (`BLINK_URL_CHECK_HTTP_TIMEOUT_MS`), HTTP provider unit tests
+
+### Fixed
+
+- CI typecheck: build `@blink/shared` / `@blink/client` before consumers (fixes missing `dist` / `@blink/client` on clean `npm ci`)
+- Cloudflare provisioner upserts www **AAAA** when IPv6 + `CLOUDFLARE_MANAGE_WWW`
+- Quarantine / expired HTML responses send `Cache-Control: no-store`
+
+### Changed
+
+- Bump Actions `checkout` / `setup-node` to v5
+- Expanded [docs/ABUSE.md](docs/ABUSE.md) / [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md); deferred ops ideas listed in [ENHANCEMENT.md](ENHANCEMENT.md)
+
 ## [0.5.0] — 2026-10-12
 
 ### Added
@@ -112,6 +133,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed locked `drizzle-kit` (use `npx drizzle-kit@0.31.11 generate` when needed) to drop nested vulnerable `esbuild` / `@esbuild-kit` chain
 - `npm audit`: 0 vulnerabilities
 
+[0.6.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0
 [0.5.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0
 [0.4.2]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2
 [0.4.1]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1
