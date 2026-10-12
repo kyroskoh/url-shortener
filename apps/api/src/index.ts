@@ -34,7 +34,7 @@ async function main() {
       info: {
         title: "Blink API",
         description: "URL shortener API for layurl.com",
-        version: "0.4.1",
+        version: "0.4.2",
       },
     },
   });

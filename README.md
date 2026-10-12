@@ -4,15 +4,35 @@
 
 Blink is a self-hosted URL shortener for **[layurl.com](https://layurl.com)** — Node.js, Postgres, Redis, nginx, and Cloudflare. Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url), with a fresh UI and Redis-backed redirects.
 
-> GitHub repository name: `url-shortener`. Product name: **Blink**. Current release: **[v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1)**.
+> GitHub repository name: `url-shortener`. Product name: **Blink**. Current release: **[v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2)**.
 
 ## Quick start
 
 ```bash
 cp .env.example .env
 # set BLINK_PASSWORD, BLINK_API_KEY, BLINK_SESSION_SECRET
-docker compose up --build
 ```
+
+**Linux / macOS / Git Bash**
+
+```bash
+./scripts/docker.sh start      # up -d --build
+./scripts/docker.sh stop       # stop containers
+./scripts/docker.sh rebuild    # rebuild + recreate
+./scripts/docker.sh logs       # follow logs
+```
+
+**Windows (PowerShell or cmd)**
+
+```powershell
+.\scripts\docker.ps1 start
+.\scripts\docker.ps1 stop
+.\scripts\docker.ps1 rebuild
+.\scripts\docker.ps1 logs
+# or: scripts\docker.cmd start
+```
+
+Or raw Compose: `docker compose up --build`.
 
 Open [http://localhost/admin/](http://localhost/admin/) (nginx). Root `/` redirects to `/admin/` unless a custom landing page is configured. API OpenAPI: [http://localhost/api/docs](http://localhost/api/docs).
 

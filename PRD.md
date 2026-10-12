@@ -12,8 +12,8 @@ Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url), rebuilt on N
 | **Host** | layurl.com |
 | **Repo** | url-shortener |
 | **Owner** | Operator / maintainer of this repository |
-| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phase 2 ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0), patch [v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)); Phase 3 ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0), patch [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1)); Phase 4 remains implementable from this PRD |
-| **Current phase** | Phase 3 complete ([v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1)); next is **Phase 4 — Ops and scale** |
+| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phase 2 ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0), patch [v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)); Phase 3 ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0), patches [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1), [v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2)); Phase 4 remains implementable from this PRD |
+| **Current phase** | Phase 3 complete ([v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2)); next is **Phase 4 — Ops and scale** |
 
 ## Problem
 
@@ -26,7 +26,7 @@ Most URL shorteners are bloated, hard to self-host, or lack essentials (custom s
 - Phase 0 application (MVP) + documentation + Cloudflare provisioner — **done** ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0))
 - Phase 1 trust/abuse features — **done**
 - Phase 2 product depth — **done**
-- Phase 3 analytics and integrations — **done** ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0), patch [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1))
+- Phase 3 analytics and integrations — **done** ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0), patches [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1), [v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2))
 - Full specification for Phase 4 (this document; Phase 4 is next to implement)
 
 ### Non-goals (all phases)
@@ -270,7 +270,7 @@ Phase 0 redirects/hits; Phase 2 pagination helpful for large lists.
 ### Verification
 
 - Contract tests for webhooks/HMAC; load smoke for pagination; metrics scrape check — **passed** (`npm test`, `docker compose up --build`, `npm run smoke`, CLI create)
-- Release: [v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0); patch [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1) (hits bar chart UX + QR show/hide download)
+- Release: [v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0); patches [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1) (hits bar chart UX + QR show/hide download), [v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2) (hits hover labels + Docker start/stop/rebuild scripts)
 
 ---
 

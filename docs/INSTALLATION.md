@@ -10,8 +10,16 @@
 ```bash
 cp .env.example .env
 # Edit secrets: BLINK_PASSWORD, BLINK_API_KEY, BLINK_SESSION_SECRET
-docker compose up --build
 ```
+
+Helper scripts (create `.env` from `.env.example` on first `start` if missing):
+
+| Platform | Start | Stop | Rebuild |
+|----------|-------|------|---------|
+| Linux / macOS | `./scripts/docker.sh start` | `./scripts/docker.sh stop` | `./scripts/docker.sh rebuild` |
+| Windows | `.\scripts\docker.ps1 start` | `.\scripts\docker.ps1 stop` | `.\scripts\docker.ps1 rebuild` |
+
+Also: `logs`, `status`, `restart`, `down`. Or raw Compose: `docker compose up --build`.
 
 | URL | Service |
 |-----|---------|

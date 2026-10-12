@@ -374,15 +374,63 @@ button:disabled {
   grid-template-columns: repeat(24, minmax(0, 1fr));
   gap: 0.2rem;
   align-items: end;
-  padding: 0.5rem 0.25rem 0;
+  padding: 1.6rem 0.25rem 0;
   border-top: 1px solid var(--line);
+  overflow: visible;
 }
 
 .hits-bar-col {
+  position: relative;
   display: grid;
   gap: 0.3rem;
   justify-items: center;
   min-width: 0;
+  cursor: default;
+}
+
+.hits-bar-col::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% - 0.15rem);
+  left: 50%;
+  z-index: 2;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: color-mix(in srgb, var(--bg-deep) 92%, var(--accent));
+  color: var(--fg);
+  font-size: 0.7rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 0.25rem);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+
+.hits-bar-col:hover::after,
+.hits-bar-col:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.hits-bar-col:hover .hits-bar,
+.hits-bar-col:focus-visible .hits-bar {
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.hits-bar-col.has-hits:hover .hits-bar,
+.hits-bar-col.has-hits:focus-visible .hits-bar {
+  background: color-mix(in srgb, var(--accent) 82%, white);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.hits-bar-col:hover .hits-bar-label,
+.hits-bar-col:focus-visible .hits-bar-label {
+  color: var(--fg);
+  opacity: 1;
 }
 
 .hits-bar-track {
@@ -400,6 +448,7 @@ button:disabled {
   max-width: 14px;
   border-radius: 3px 3px 1px 1px;
   background: color-mix(in srgb, var(--accent) 22%, transparent);
+  transition: background 0.12s ease, box-shadow 0.12s ease;
 }
 
 .hits-bar.is-active {
@@ -419,6 +468,14 @@ button:disabled {
   font-size: 0.65rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition:
+    color 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.hits-bar-label.is-tick {
+  opacity: 1;
 }
 
 .hits-axis-hint {

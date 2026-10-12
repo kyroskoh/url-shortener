@@ -1190,8 +1190,17 @@ function HitsChart({
           >
             {series.map((p) => {
               const pct = Math.max((p.hits / max) * 100, p.hits > 0 ? 6 : 0);
+              const hour = p.label.slice(0, 2);
+              const isTick = Number(hour) % 2 === 0;
+              const tip = `${p.label} UTC · ${p.hits} hit${p.hits === 1 ? "" : "s"}`;
               return (
-                <div className="hits-bar-col" key={p.t} title={`${p.label} UTC · ${p.hits}`}>
+                <div
+                  className={`hits-bar-col${p.hits > 0 ? " has-hits" : ""}`}
+                  key={p.t}
+                  data-tip={tip}
+                  tabIndex={0}
+                  aria-label={tip}
+                >
                   <div className="hits-bar-track" style={{ height: chartH }}>
                     {p.hits > 0 && (
                       <span className="hits-bar-count">{p.hits}</span>
@@ -1201,10 +1210,10 @@ function HitsChart({
                       style={{ height: `${pct}%` }}
                     />
                   </div>
-                  <span className="hits-bar-label">
-                    {Number(p.label.slice(0, 2)) % 6 === 0
-                      ? p.label.slice(0, 2)
-                      : ""}
+                  <span
+                    className={`hits-bar-label${isTick ? " is-tick" : ""}`}
+                  >
+                    {hour}
                   </span>
                 </div>
               );

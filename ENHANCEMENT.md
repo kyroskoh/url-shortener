@@ -1,6 +1,6 @@
 # Enhancements backlog
 
-Ideas beyond the shipped roadmap. Phase 0–3 (through **v0.4.0**) are implemented in-repo; Phase 4 remains in [PRD.md](PRD.md).
+Ideas beyond the shipped roadmap. Phase 0–3 (through **v0.4.2**) are implemented in-repo; Phase 4 remains in [PRD.md](PRD.md).
 
 ## Shipped in Phase 3 (not open)
 
