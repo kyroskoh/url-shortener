@@ -3,7 +3,7 @@
 # Usage:
 #   ./deploy/scripts/ship-prod.sh              # apply + deploy
 #   ./deploy/scripts/ship-prod.sh --dry-run    # Cloudflare dry-run only
-#   IMAGE_TAG=v0.6.1 ./deploy/scripts/ship-prod.sh
+#   IMAGE_TAG=v0.6.2 ./deploy/scripts/ship-prod.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"

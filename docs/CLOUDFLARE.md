@@ -26,6 +26,8 @@ CLOUDFLARE_MANAGE_WWW=true
 
 ## Production ship (recommended)
 
+Full deploy steps (local / staging / production): [DEPLOY.md](DEPLOY.md).
+
 Prefer the ops path (secrets + Cloudflare + deploy in one flow):
 
 ```bash

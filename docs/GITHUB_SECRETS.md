@@ -4,6 +4,8 @@
 
 ## Ship steps
 
+Full local / staging / production runbooks: [DEPLOY.md](DEPLOY.md).
+
 Prerequisites (once, outside this repo): Cloudflare zone for `layurl.com` with NS at Cloudflare; origin host with SSH and **host nginx** already installed. Docker is installed automatically on first ship via get.docker.com if missing.
 
 ```bash
@@ -14,7 +16,7 @@ gh auth login   # once, if needed
 npm run ops:ship   # or: npm run ops:cf-dry-run first
 ```
 
-`ops:ship` bootstraps the GitHub Environment `production` (secrets/vars), runs Cloudflare apply, deploys Compose from GHCR, and health-checks `/api/ready`.
+`ops:ship` bootstraps the GitHub Environment `production` (secrets/vars), runs Cloudflare apply, deploys Compose from GHCR (host nginx + certbot for `layurl.com`), and health-checks `/api/ready`.
 
 Optional splits:
 

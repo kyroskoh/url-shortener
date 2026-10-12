@@ -7,9 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2] — 2026-10-12
+
 ### Added
 
 - Prod origin: `ensure-docker.sh` (get.docker.com), host nginx [`deploy/nginx.blink-layurl.com.conf`](deploy/nginx.blink-layurl.com.conf) as `zz-blink-layurl.com.conf`, **certbot** [`ensure-letsencrypt.sh`](deploy/scripts/ensure-letsencrypt.sh) for `layurl.com`/`www` (reuse existing certbot; do not reuse other site certs); Compose nginx off (API/web on `127.0.0.1:3000` / `:8080`)
+- [docs/DEPLOY.md](docs/DEPLOY.md) — local, staging, and production deploy steps
+- `BLINK_LETSENCRYPT_EMAIL` (and optional cert name / webroot) in production env sync
+
+### Changed
+
+- Deploy workflow installs host nginx + issues layurl.com TLS before Compose up; docs cross-link DEPLOY.md from README / INSTALLATION / CLOUDFLARE / GITHUB_SECRETS
 
 ## [0.6.1] — 2026-10-12
 
@@ -152,6 +160,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed locked `drizzle-kit` (use `npx drizzle-kit@0.31.11 generate` when needed) to drop nested vulnerable `esbuild` / `@esbuild-kit` chain
 - `npm audit`: 0 vulnerabilities
 
+[0.6.2]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.2
 [0.6.1]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.1
 [0.6.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0
 [0.5.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0

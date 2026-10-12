@@ -139,7 +139,9 @@ UI timestamps (created / last hit / expires) use month abbreviations (MMM) and s
 
 Trusts `CF-Connecting-IP` / `X-Forwarded-For` when behind Cloudflare.
 
-## Production ship (automated)
+## Deploy (local / staging / production)
+
+Full step lists: **[DEPLOY.md](DEPLOY.md)**.
 
 ```bash
 cp .env.production.example .env.production
@@ -149,16 +151,7 @@ gh auth login   # once, if needed
 npm run ops:ship   # or: npm run ops:cf-dry-run first
 ```
 
-Details: [GITHUB_SECRETS.md](GITHUB_SECRETS.md). Irreducible once: Cloudflare zone/NS, SSH host (Docker is auto-installed via get.docker.com; host nginx must already exist for prod).
-
-## Production checklist
-
-1. Follow [Production ship](#production-ship-automated) above
-2. Publish images via `v*` tag CI → GHCR before shipping a new tag
-3. [CLOUDFLARE.md](CLOUDFLARE.md) — provisioner runs inside `ops:ship` (DNS, Full strict, cache bypass)
-4. Enable Turnstile if public mode is on; set keys + `BLINK_TURNSTILE_FORCE=true` in `.env.production`
-5. Consider URL blocklist (`deploy/blocklist.example.txt`) — see [ABUSE.md](ABUSE.md)
-6. Regular Postgres backups — see [Postgres backups](#postgres-backups)
+Secrets: [GITHUB_SECRETS.md](GITHUB_SECRETS.md). Irreducible once: Cloudflare zone/NS, SSH host (Docker via get.docker.com; host nginx must already exist for prod).
 
 ## Resource expectations
 
