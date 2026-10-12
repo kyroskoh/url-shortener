@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Install Blink layurl.com vhost into an existing host nginx and reload.
-# Fills SSL cert paths for Cloudflare Full (strict); falls back to HTTP-only
-# if certs are missing.
+# Install Blink layurl.com vhost + Let's Encrypt (certbot webroot).
+# Order: HTTP vhost (ACME) → certbot for layurl.com → SSL vhost → reload.
+# Does not reuse unrelated certs (e.g. api.kyroskoh.xyz).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -42,107 +42,79 @@ if [[ -f "$ROOT/.env" ]]; then
   set +a
 fi
 
-resolve_ssl() {
-  local cert="${BLINK_SSL_CERT:-}"
-  local key="${BLINK_SSL_KEY:-}"
-
-  if [[ -n "$cert" && -n "$key" && -f "$cert" && -f "$key" ]]; then
-    echo "$cert|$key"
-    return
+install_site() {
+  local file="$1"
+  for legacy in blink-layurl.conf nginx.host.conf zz-blink-layurl.com.conf; do
+    run rm -f "/etc/nginx/sites-enabled/$legacy" "/etc/nginx/sites-available/$legacy" "/etc/nginx/conf.d/$legacy" 2>/dev/null || true
+  done
+  if [[ -d /etc/nginx/sites-available ]]; then
+    local dest="/etc/nginx/sites-available/$SITE_NAME"
+    run cp "$file" "$dest"
+    run ln -sfn "$dest" "/etc/nginx/sites-enabled/$SITE_NAME"
+    echo "Installed $dest → sites-enabled/$SITE_NAME"
+  elif [[ -d /etc/nginx/conf.d ]]; then
+    local dest="/etc/nginx/conf.d/$SITE_NAME"
+    run cp "$file" "$dest"
+    echo "Installed $dest"
+  else
+    echo "Neither sites-available nor conf.d found under /etc/nginx" >&2
+    exit 1
   fi
-
-  # Common Let's Encrypt layout for layurl.com
-  cert="/etc/letsencrypt/live/layurl.com/fullchain.pem"
-  key="/etc/letsencrypt/live/layurl.com/privkey.pem"
-  if [[ -f "$cert" && -f "$key" ]]; then
-    echo "$cert|$key"
-    return
+  run nginx -t
+  if command -v systemctl >/dev/null 2>&1; then
+    run systemctl reload nginx
+  else
+    run nginx -s reload
   fi
-
-  # Cloudflare Origin CA style drop path
-  cert="/etc/nginx/ssl/layurl.com.pem"
-  key="/etc/nginx/ssl/layurl.com.key"
-  if [[ -f "$cert" && -f "$key" ]]; then
-    echo "$cert|$key"
-    return
-  fi
-
-  # Reuse first ssl_certificate pair from other nginx configs on this host
-  local found
-  found="$(
-    grep -RhoE '^\s*ssl_certificate\s+[^;]+;' /etc/nginx 2>/dev/null \
-      | grep -v zz-blink-layurl \
-      | head -1 \
-      | sed -E 's/.*ssl_certificate\s+([^;]+);/\1/' \
-      | tr -d ' '"'"'"' \
-      || true
-  )"
-  local found_key
-  found_key="$(
-    grep -RhoE '^\s*ssl_certificate_key\s+[^;]+;' /etc/nginx 2>/dev/null \
-      | grep -v zz-blink-layurl \
-      | head -1 \
-      | sed -E 's/.*ssl_certificate_key\s+([^;]+);/\1/' \
-      | tr -d ' '"'"'"' \
-      || true
-  )"
-  if [[ -n "$found" && -n "$found_key" && -f "$found" && -f "$found_key" ]]; then
-    echo "Reusing existing host certs: $found" >&2
-    echo "$found|$found_key"
-    return
-  fi
-
-  echo ""
 }
 
-SSL_PAIR="$(resolve_ssl || true)"
-cp "$SRC" "$TMP"
-
-if [[ -n "$SSL_PAIR" ]]; then
-  CERT="${SSL_PAIR%%|*}"
-  KEY="${SSL_PAIR##*|}"
-  # Escape for sed
-  CERT_ESC="$(printf '%s' "$CERT" | sed 's/[\/&]/\\&/g')"
-  KEY_ESC="$(printf '%s' "$KEY" | sed 's/[\/&]/\\&/g')"
-  sed -i \
-    -e "s|__BLINK_SSL_CERT__|${CERT_ESC}|g" \
-    -e "s|__BLINK_SSL_KEY__|${KEY_ESC}|g" \
-    "$TMP"
-  echo "SSL enabled: cert=$CERT"
-else
-  echo "WARN: no SSL certs found — installing HTTP-only (Cloudflare Full OK; Full strict needs origin TLS)" >&2
-  echo "      Set BLINK_SSL_CERT / BLINK_SSL_KEY or place files at /etc/nginx/ssl/layurl.com.{pem,key}" >&2
-  # Drop 443 listens and SSL block
+render_http_only() {
+  cp "$SRC" "$TMP"
   sed -i \
     -e '/listen 443 ssl;/d' \
     -e '/listen \[::\]:443 ssl;/d' \
     -e '/__BLINK_SSL_BEGIN__/,/__BLINK_SSL_END__/d' \
     "$TMP"
+}
+
+render_with_ssl() {
+  local cert="$1"
+  local key="$2"
+  local cert_esc key_esc
+  cp "$SRC" "$TMP"
+  cert_esc="$(printf '%s' "$cert" | sed 's/[\/&]/\\&/g')"
+  key_esc="$(printf '%s' "$key" | sed 's/[\/&]/\\&/g')"
+  sed -i \
+    -e "s|__BLINK_SSL_CERT__|${cert_esc}|g" \
+    -e "s|__BLINK_SSL_KEY__|${key_esc}|g" \
+    "$TMP"
+}
+
+# 1) HTTP-only first so ACME challenge can reach /.well-known via this vhost
+run mkdir -p /var/www/certbot
+render_http_only
+install_site "$TMP"
+echo "HTTP vhost installed (ACME-ready)"
+
+# 2) Obtain / reuse Let's Encrypt cert for layurl.com only (not other host certs)
+bash "$ROOT/deploy/scripts/ensure-letsencrypt.sh" "$ROOT/.env"
+
+CERT="${BLINK_SSL_CERT:-/etc/letsencrypt/live/layurl.com/fullchain.pem}"
+KEY="${BLINK_SSL_KEY:-/etc/letsencrypt/live/layurl.com/privkey.pem}"
+# ensure-letsencrypt prints BLINK_SSL_*; also accept defaults if files exist
+if [[ ! -f "$CERT" || ! -f "$KEY" ]]; then
+  CERT="/etc/letsencrypt/live/layurl.com/fullchain.pem"
+  KEY="/etc/letsencrypt/live/layurl.com/privkey.pem"
 fi
 
-# Drop legacy install names from earlier deploys
-for legacy in blink-layurl.conf nginx.host.conf zz-blink-layurl.com.conf; do
-  run rm -f "/etc/nginx/sites-enabled/$legacy" "/etc/nginx/sites-available/$legacy" "/etc/nginx/conf.d/$legacy" 2>/dev/null || true
-done
-
-if [[ -d /etc/nginx/sites-available ]]; then
-  DEST="/etc/nginx/sites-available/$SITE_NAME"
-  run cp "$TMP" "$DEST"
-  run ln -sfn "$DEST" "/etc/nginx/sites-enabled/$SITE_NAME"
-  echo "Installed $DEST → sites-enabled/$SITE_NAME"
-elif [[ -d /etc/nginx/conf.d ]]; then
-  DEST="/etc/nginx/conf.d/$SITE_NAME"
-  run cp "$TMP" "$DEST"
-  echo "Installed $DEST"
-else
-  echo "Neither sites-available nor conf.d found under /etc/nginx" >&2
+if [[ ! -f "$CERT" || ! -f "$KEY" ]]; then
+  echo "ERROR: Let's Encrypt files missing after ensure-letsencrypt.sh" >&2
+  echo "       Expected /etc/letsencrypt/live/layurl.com/{fullchain,privkey}.pem" >&2
   exit 1
 fi
 
-run nginx -t
-if command -v systemctl >/dev/null 2>&1; then
-  run systemctl reload nginx
-else
-  run nginx -s reload
-fi
+# 3) Re-install with SSL
+render_with_ssl "$CERT" "$KEY"
+install_site "$TMP"
+echo "SSL enabled with Let's Encrypt: $CERT"
 echo "Host nginx reloaded for Blink ($SITE_NAME)"

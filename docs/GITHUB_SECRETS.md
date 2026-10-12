@@ -62,6 +62,7 @@ Scripts never print secret values. They call [`bootstrap-github-env.sh`](../depl
 | `CLOUDFLARE_MANAGE_WWW` | `true` | Upsert www A/AAAA |
 | `DEPLOY_PATH` | `~/url-shortener` | Remote compose directory |
 | `HEALTHCHECK_URL` | `{BLINK_BASE_URL}/api/ready` | Post-deploy check |
+| `BLINK_LETSENCRYPT_EMAIL` | (empty) | Certbot registration email (recommended) |
 
 ## Manual workflow (optional)
 

@@ -91,6 +91,7 @@ set_var BLINK_TURNSTILE_FORCE
 set_var CLOUDFLARE_MANAGE_WWW
 set_var DEPLOY_PATH
 set_var HEALTHCHECK_URL
+set_var BLINK_LETSENCRYPT_EMAIL
 
 # Defaults when unset in file
 if [[ -z "${BLINK_BASE_URL:-}" ]]; then

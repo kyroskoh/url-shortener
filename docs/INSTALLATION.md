@@ -118,7 +118,7 @@ Optional env: `BACKUP_DIR` overrides the output directory (default `./backups`).
 
 **Local Compose** includes container nginx ([`deploy/nginx.conf`](../deploy/nginx.conf)) on port 80.
 
-**Production** (existing host nginx): Compose nginx is disabled. API/web bind `127.0.0.1:3000` / `127.0.0.1:8080`. Install [`deploy/nginx.blink-layurl.com.conf`](../deploy/nginx.blink-layurl.com.conf) as `/etc/nginx/.../zz-blink-layurl.com.conf` via `deploy/scripts/install-host-nginx.sh` (also run by `ops:ship`). That vhost listens on **80 and 443** when TLS cert paths resolve (`BLINK_SSL_CERT` / `BLINK_SSL_KEY` or auto-detect).
+**Production** (existing host nginx): Compose nginx is disabled. API/web bind `127.0.0.1:3000` / `127.0.0.1:8080`. `install-host-nginx.sh` installs [`deploy/nginx.blink-layurl.com.conf`](../deploy/nginx.blink-layurl.com.conf) as `zz-blink-layurl.com.conf`, then runs **certbot** ([`ensure-letsencrypt.sh`](../deploy/scripts/ensure-letsencrypt.sh)) for `layurl.com` / `www` only (reuses host certbot if already installed; does not touch other certs like `api.kyroskoh.xyz`). Set `BLINK_LETSENCRYPT_EMAIL` in `.env.production`.
 
 Routing (both configs):
 

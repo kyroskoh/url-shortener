@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Prod origin: `ensure-docker.sh` (get.docker.com), host nginx [`deploy/nginx.blink-layurl.com.conf`](deploy/nginx.blink-layurl.com.conf) installed as `zz-blink-layurl.com.conf` + `install-host-nginx.sh`; Compose nginx disabled in `docker-compose.prod.yml` (API/web on `127.0.0.1:3000` / `:8080`)
+- Prod origin: `ensure-docker.sh` (get.docker.com), host nginx [`deploy/nginx.blink-layurl.com.conf`](deploy/nginx.blink-layurl.com.conf) as `zz-blink-layurl.com.conf`, **certbot** [`ensure-letsencrypt.sh`](deploy/scripts/ensure-letsencrypt.sh) for `layurl.com`/`www` (reuse existing certbot; do not reuse other site certs); Compose nginx off (API/web on `127.0.0.1:3000` / `:8080`)
 
 ## [0.6.1] — 2026-10-12
 
