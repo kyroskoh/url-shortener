@@ -1,7 +1,7 @@
 {
   "name": "url-shortener",
   "private": true,
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Blink — URL shortener for layurl.com",
   "workspaces": [
     "apps/*",
@@ -16,7 +16,10 @@
     "test:e2e": "playwright test",
     "smoke": "node scripts/smoke.mjs",
     "cloudflare:dry-run": "node deploy/scripts/cloudflare-provision.mjs --dry-run",
-    "cloudflare:apply": "node deploy/scripts/cloudflare-provision.mjs --apply"
+    "cloudflare:apply": "node deploy/scripts/cloudflare-provision.mjs --apply",
+    "ops:bootstrap": "bash deploy/scripts/bootstrap-github-env.sh",
+    "ops:ship": "bash deploy/scripts/ship-prod.sh",
+    "ops:cf-dry-run": "bash deploy/scripts/ship-prod.sh --dry-run"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0"

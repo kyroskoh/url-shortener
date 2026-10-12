@@ -16,7 +16,7 @@ on:
         type: boolean
         default: false
       image_tag:
-        description: GHCR image tag (e.g. v0.6.0 or latest)
+        description: GHCR image tag (e.g. v0.6.1 or latest)
         type: string
         default: latest
 
@@ -46,8 +46,12 @@ jobs:
           CLOUDFLARE_MANAGE_WWW: ${{ vars.CLOUDFLARE_MANAGE_WWW || 'true' }}
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ZONE_ID" ]; then
-            echo "CLOUDFLARE_API_TOKEN / CLOUDFLARE_ZONE_ID not set — skipping"
-            exit 0
+            echo "CLOUDFLARE_API_TOKEN / CLOUDFLARE_ZONE_ID required for dry-run" >&2
+            exit 1
+          fi
+          if [ -z "$CLOUDFLARE_ORIGIN_IPV4" ] && [ -z "$CLOUDFLARE_ORIGIN_IPV6" ]; then
+            echo "CLOUDFLARE_ORIGIN_IPV4 or CLOUDFLARE_ORIGIN_IPV6 required" >&2
+            exit 1
           fi
           node deploy/scripts/cloudflare-provision.mjs --dry-run
 
@@ -73,6 +77,10 @@ jobs:
             echo "CLOUDFLARE_API_TOKEN / CLOUDFLARE_ZONE_ID required for apply" >&2
             exit 1
           fi
+          if [ -z "$CLOUDFLARE_ORIGIN_IPV4" ] && [ -z "$CLOUDFLARE_ORIGIN_IPV6" ]; then
+            echo "CLOUDFLARE_ORIGIN_IPV4 or CLOUDFLARE_ORIGIN_IPV6 required" >&2
+            exit 1
+          fi
           node deploy/scripts/cloudflare-provision.mjs --apply
 
   deploy:
@@ -82,21 +90,25 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v5
-      - name: Check deploy secrets
-        id: gate
+      - name: Require deploy secrets
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          BLINK_PASSWORD: ${{ secrets.BLINK_PASSWORD }}
+          BLINK_API_KEY: ${{ secrets.BLINK_API_KEY }}
+          BLINK_SESSION_SECRET: ${{ secrets.BLINK_SESSION_SECRET }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
-          if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_USER" ] || [ -z "$DEPLOY_SSH_KEY" ]; then
-            echo "DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY not set — skipping deploy"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
+          missing=
+          for k in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY BLINK_PASSWORD BLINK_API_KEY BLINK_SESSION_SECRET POSTGRES_PASSWORD; do
+            if [ -z "${!k}" ]; then missing="$missing $k"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "Missing required secrets:$missing" >&2
+            exit 1
           fi
       - name: Render .env from secrets
-        if: steps.gate.outputs.skip != 'true'
         env:
           FORCE: "1"
           BLINK_PASSWORD: ${{ secrets.BLINK_PASSWORD }}
@@ -119,7 +131,6 @@ jobs:
           export GHCR_OWNER="$OWNER"
           ./deploy/scripts/render-env.sh .env.deploy
       - name: Configure SSH
-        if: steps.gate.outputs.skip != 'true'
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -129,7 +140,6 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
       - name: Sync and compose up
-        if: steps.gate.outputs.skip != 'true'
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -141,7 +151,20 @@ jobs:
           OWNER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
           TOKEN="${GHCR_PULL_TOKEN:-$GITHUB_TOKEN}"
           REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
-          ssh "$REMOTE" "mkdir -p ${DEPLOY_PATH}/deploy"
+          REPO_URL="https://github.com/${{ github.repository }}.git"
+          ssh "$REMOTE" "set -e
+            DEPLOY_PATH='${DEPLOY_PATH}'
+            mkdir -p \"\$(dirname \$DEPLOY_PATH)\"
+            if [ ! -d \"\$DEPLOY_PATH/.git\" ] && [ ! -f \"\$DEPLOY_PATH/docker-compose.yml\" ]; then
+              if [ -d \"\$DEPLOY_PATH\" ] && [ -z \"\$(ls -A \"\$DEPLOY_PATH\" 2>/dev/null)\" ]; then
+                rmdir \"\$DEPLOY_PATH\" 2>/dev/null || true
+              fi
+              if [ ! -d \"\$DEPLOY_PATH\" ]; then
+                git clone --depth 1 '${REPO_URL}' \"\$DEPLOY_PATH\" || mkdir -p \"\$DEPLOY_PATH/deploy\"
+              fi
+            fi
+            mkdir -p \"\$DEPLOY_PATH/deploy\"
+          "
           scp .env.deploy "${REMOTE}:${DEPLOY_PATH}/.env"
           scp docker-compose.yml docker-compose.prod.yml "${REMOTE}:${DEPLOY_PATH}/"
           scp deploy/nginx.conf "${REMOTE}:${DEPLOY_PATH}/deploy/"
@@ -157,7 +180,6 @@ jobs:
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
           "
       - name: Post-deploy health check
-        if: steps.gate.outputs.skip != 'true'
         env:
           HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
           BLINK_BASE_URL: ${{ vars.BLINK_BASE_URL || 'https://layurl.com' }}

@@ -3,7 +3,7 @@
   "info": {
     "title": "Blink API",
     "description": "URL shortener API for layurl.com",
-    "version": "0.6.0"
+    "version": "0.6.1"
   },
   "paths": {
     "/health": {
@@ -17,7 +17,11 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "properties": { "ok": { "type": "boolean" } }
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  }
                 }
               }
             }
@@ -30,8 +34,12 @@
         "operationId": "getReady",
         "summary": "Readiness",
         "responses": {
-          "200": { "description": "Ready" },
-          "503": { "description": "Not ready" }
+          "200": {
+            "description": "Ready"
+          },
+          "503": {
+            "description": "Not ready"
+          }
         }
       }
     },
@@ -40,7 +48,9 @@
         "operationId": "getMetrics",
         "summary": "Prometheus metrics",
         "responses": {
-          "200": { "description": "Prometheus text" }
+          "200": {
+            "description": "Prometheus text"
+          }
         }
       }
     },
@@ -49,14 +59,42 @@
         "operationId": "listLinks",
         "summary": "List links (cursor pagination)",
         "parameters": [
-          { "name": "q", "in": "query", "schema": { "type": "string" } },
-          { "name": "tag", "in": "query", "schema": { "type": "string" } },
-          { "name": "folder", "in": "query", "schema": { "type": "string" } },
-          { "name": "cursor", "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "folder",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "limit",
             "in": "query",
-            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
           }
         ],
         "responses": {
@@ -64,7 +102,9 @@
             "description": "Page of links",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/LinkList" }
+                "schema": {
+                  "$ref": "#/components/schemas/LinkList"
+                }
               }
             }
           }
@@ -77,14 +117,18 @@
           {
             "name": "Idempotency-Key",
             "in": "header",
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateLink" }
+              "schema": {
+                "$ref": "#/components/schemas/CreateLink"
+              }
             }
           }
         },
@@ -93,7 +137,9 @@
             "description": "Created",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/CreateLinkResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/CreateLinkResponse"
+                }
               }
             }
           }
@@ -109,12 +155,18 @@
             "name": "slug",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
-          "200": { "description": "Deleted" },
-          "404": { "description": "Not found" }
+          "200": {
+            "description": "Deleted"
+          },
+          "404": {
+            "description": "Not found"
+          }
         }
       }
     },
@@ -127,17 +179,33 @@
             "name": "slug",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           },
-          { "name": "from", "in": "query", "schema": { "type": "string" } },
-          { "name": "to", "in": "query", "schema": { "type": "string" } }
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "Points",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/HitSeries" }
+                "schema": {
+                  "$ref": "#/components/schemas/HitSeries"
+                }
               }
             }
           }
@@ -150,15 +218,43 @@
       "Link": {
         "type": "object",
         "properties": {
-          "slug": { "type": "string" },
-          "destination": { "type": "string" },
-          "notes": { "type": ["string", "null"] },
-          "status": { "type": "string", "enum": ["active", "quarantined"] },
-          "hits": { "type": "number" },
-          "maxHits": { "type": ["number", "null"] },
-          "shortUrl": { "type": "string" },
-          "oneTime": { "type": "boolean" },
-          "hasPassword": { "type": "boolean" }
+          "slug": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "quarantined"
+            ]
+          },
+          "hits": {
+            "type": "number"
+          },
+          "maxHits": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "shortUrl": {
+            "type": "string"
+          },
+          "oneTime": {
+            "type": "boolean"
+          },
+          "hasPassword": {
+            "type": "boolean"
+          }
         }
       },
       "LinkList": {
@@ -166,27 +262,59 @@
         "properties": {
           "links": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/Link" }
+            "items": {
+              "$ref": "#/components/schemas/Link"
+            }
           },
-          "nextCursor": { "type": ["string", "null"] }
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
         }
       },
       "CreateLink": {
         "type": "object",
-        "required": ["destination"],
+        "required": [
+          "destination"
+        ],
         "properties": {
-          "destination": { "type": "string" },
-          "slug": { "type": "string" },
-          "notes": { "type": ["string", "null"] },
-          "maxHits": { "type": ["number", "null"] },
-          "oneTime": { "type": "boolean" }
+          "destination": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "maxHits": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "oneTime": {
+            "type": "boolean"
+          }
         }
       },
       "CreateLinkResponse": {
         "type": "object",
         "properties": {
-          "link": { "$ref": "#/components/schemas/Link" },
-          "warnings": { "type": "array", "items": { "type": "string" } }
+          "link": {
+            "$ref": "#/components/schemas/Link"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       },
       "HitSeries": {
@@ -197,8 +325,12 @@
             "items": {
               "type": "object",
               "properties": {
-                "t": { "type": "string" },
-                "hits": { "type": "number" }
+                "t": {
+                  "type": "string"
+                },
+                "hits": {
+                  "type": "number"
+                }
               }
             }
           }

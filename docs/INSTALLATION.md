@@ -133,16 +133,23 @@ UI timestamps (created / last hit / expires) use month abbreviations (MMM) and s
 
 Trusts `CF-Connecting-IP` / `X-Forwarded-For` when behind Cloudflare.
 
+## Production ship (automated)
+
+```bash
+cp .env.production.example .env.production   # fill once
+npm run ops:ship                             # sync secrets → CF apply → Compose + health check
+```
+
+Details: [GITHUB_SECRETS.md](GITHUB_SECRETS.md). Irreducible once: Cloudflare zone/NS, SSH host with Docker, `gh auth login`.
+
 ## Production checklist
 
-1. Configure [GitHub Secrets](GITHUB_SECRETS.md) (`BLINK_*`, `POSTGRES_PASSWORD`, Cloudflare, deploy SSH)
-2. `BLINK_BASE_URL=https://layurl.com` (Environment variable)
-3. Publish images via `v*` tag CI → GHCR; deploy with Actions **Deploy** (`docker-compose.prod.yml`) or pull on origin
-4. [CLOUDFLARE.md](CLOUDFLARE.md) — dry-run then apply (DNS, Full strict, cache bypass)
-5. Enable Turnstile if public mode is on; use `BLINK_TURNSTILE_FORCE=true` for public instances
-6. Consider URL blocklist (`deploy/blocklist.example.txt`) — see [ABUSE.md](ABUSE.md)
-7. Regular Postgres backups — see [Postgres backups](#postgres-backups) (`./deploy/scripts/backup-postgres.sh`)
-8. Confirm post-deploy `GET /api/ready` (Actions health check)
+1. Fill `.env.production` and run `npm run ops:ship` (see above)
+2. Publish images via `v*` tag CI → GHCR before shipping a new tag
+3. [CLOUDFLARE.md](CLOUDFLARE.md) — provisioner runs inside `ops:ship` (DNS, Full strict, cache bypass)
+4. Enable Turnstile if public mode is on; set keys + `BLINK_TURNSTILE_FORCE=true` in `.env.production`
+5. Consider URL blocklist (`deploy/blocklist.example.txt`) — see [ABUSE.md](ABUSE.md)
+6. Regular Postgres backups — see [Postgres backups](#postgres-backups)
 
 ## Resource expectations
 

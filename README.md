@@ -1,10 +1,12 @@
 # Blink
 
+[![Release](https://img.shields.io/github/v/release/kyroskoh/url-shortener)](https://github.com/kyroskoh/url-shortener/releases/latest)
+
 **Short links. Instant redirects.**
 
 Blink is a self-hosted URL shortener for **[layurl.com](https://layurl.com)** — Node.js, Postgres, Redis, nginx, and Cloudflare. Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url), with a fresh UI and Redis-backed redirects.
 
-> GitHub repository name: `url-shortener`. Product name: **Blink**. Current release: **[v0.6.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0)**.
+> GitHub repository name: `url-shortener`. Product name: **Blink**.
 
 ## Quick start
 
@@ -51,14 +53,16 @@ Default local admin password/API key come from `.env` (change before any public 
 - **Phase 2:** UTM builder · destination preview · bulk CSV import · tags/folders · per-link password · one-time links · custom landing page (`BLINK_LANDING_PAGE`)
 - **Phase 3:** hourly hit charts · max redirects · HMAC webhooks · idempotent create · cursor pagination · Prometheus `/api/metrics` · `@blink/client` + `blink` CLI
 - **Phase 4:** Postgres backup/restore · GitHub Actions CI + GHCR images · Playwright E2E
-- **v0.6.0:** Phase 1 / Cloudflare harden · Secrets-backed Deploy workflow · prod Compose/GHCR overlay
+- **v0.6.x:** Phase 1 / Cloudflare harden · Secrets-backed Deploy · `ops:ship` zero-click production path
 - QR codes (show/hide + PNG download) · CSV export · Docker Compose · Cloudflare DNS/SSL/cache provisioner
 
 Ideas beyond the roadmap: [ENHANCEMENT.md](ENHANCEMENT.md).
 
 ## CI and images
 
-On **pull requests** to `main`: typecheck (builds workspace packages first), unit tests, and Playwright E2E against Compose. On **`v*` tags** only: the same tests, then publish `ghcr.io/<owner>/blink-api` and `blink-web` (version tag + `latest`) — no second CI when you also push `main`. Manual **Deploy** workflow: Cloudflare dry-run/apply + SSH Compose from GHCR using [GitHub Secrets](docs/GITHUB_SECRETS.md). Local Compose still builds from Dockerfiles; prod overlay: `docker-compose.prod.yml`.
+On **pull requests** to `main`: typecheck (builds workspace packages first), unit tests, and Playwright E2E against Compose. On **`v*` tags** only: the same tests, then publish `ghcr.io/<owner>/blink-api` and `blink-web` (version tag + `latest`) — no second CI when you also push `main`.
+
+**Production (no dashboard clicking):** copy `.env.production.example` → `.env.production`, then `npm run ops:ship` (bootstraps GitHub Environment secrets, Cloudflare apply, GHCR Compose deploy + health check). See [docs/GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md). Local Compose still builds from Dockerfiles; prod overlay: `docker-compose.prod.yml`.
 
 ## Backups
 

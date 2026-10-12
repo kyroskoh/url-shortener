@@ -1,6 +1,6 @@
 # Enhancements backlog
 
-Ideas beyond the shipped roadmap. Phases 0–4 complete; trust/ops hardening through **[v0.6.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0)**. See [PRD.md](PRD.md) / [CHANGELOG.md](CHANGELOG.md).
+Ideas beyond the shipped roadmap. Phases 0–4 complete; trust/ops hardening through **[v0.6.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.1)**. See [PRD.md](PRD.md) / [CHANGELOG.md](CHANGELOG.md).
 
 ## Shipped in Phase 3 (not open)
 

@@ -5,11 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.1] — 2026-10-12
+
+### Added
+
+- README release badge (shields.io → latest GitHub release)
+- Zero-click ops: `.env.production.example`, `deploy/scripts/bootstrap-github-env.sh`, `ship-prod.sh`, `scripts/ops.sh` / `ops.ps1`, npm `ops:bootstrap` / `ops:ship` / `ops:cf-dry-run`
+- Deploy workflow: fail-closed when secrets missing; clone compose tree on origin if absent
 
 ### Changed
 
 - CI: run tests on pull requests; full test + GHCR publish only on `v*` tags (no duplicate pipeline on `main` push)
+- [docs/GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md) / INSTALLATION: one-command production ship
 
 ## [0.6.0] — 2026-10-12
 
@@ -139,6 +146,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed locked `drizzle-kit` (use `npx drizzle-kit@0.31.11 generate` when needed) to drop nested vulnerable `esbuild` / `@esbuild-kit` chain
 - `npm audit`: 0 vulnerabilities
 
+[0.6.1]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.1
 [0.6.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0
 [0.5.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0
 [0.4.2]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2
