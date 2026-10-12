@@ -35,11 +35,11 @@ function assert(cond, msg) {
 async function main() {
   console.log(`Smoke against ${base}`);
 
-  const health = await req("/api/healthz");
-  assert(health.res.status === 200, "healthz failed");
+  const health = await req("/api/health");
+  assert(health.res.status === 200, "health failed");
 
-  const ready = await req("/api/readyz");
-  assert(ready.res.status === 200, "readyz failed");
+  const ready = await req("/api/ready");
+  assert(ready.res.status === 200, "ready failed");
 
   const home = await req("/");
   assert(
@@ -56,6 +56,15 @@ async function main() {
     body: JSON.stringify({ destination: "https://example.com", slug: "api" }),
   });
   assert(reserved.res.status === 400, "reserved slug should fail");
+
+  const badSlug = await req("/api/links", {
+    method: "POST",
+    body: JSON.stringify({
+      destination: "https://example.com",
+      slug: "bad.slug!",
+    }),
+  });
+  assert(badSlug.res.status === 400, "invalid slug characters should fail");
 
   const badScheme = await req("/api/links", {
     method: "POST",
@@ -219,11 +228,113 @@ async function main() {
     "re-enabled redirect failed",
   );
 
+  // maxHits: 2 redirects then 410; cannot decrease on edit
+  const maxSlug = `max${Date.now().toString(36)}`;
+  const maxCreate = await req("/api/links", {
+    method: "POST",
+    body: JSON.stringify({
+      destination: "https://example.com/max",
+      slug: maxSlug,
+      maxHits: 2,
+    }),
+  });
+  assert(maxCreate.res.status === 201, `maxHits create failed: ${maxCreate.text}`);
+  assert(maxCreate.json?.link?.maxHits === 2, "maxHits not stored");
+  const max1 = await req(`/${maxSlug}`);
+  assert(max1.res.status === 302 || max1.res.status === 301, "maxHits first redirect");
+  const max2 = await req(`/${maxSlug}`);
+  assert(max2.res.status === 302 || max2.res.status === 301, "maxHits second redirect");
+  const max3 = await req(`/${maxSlug}`);
+  assert(max3.res.status === 410, `maxHits third expected 410 got ${max3.res.status}`);
+  const maxDec = await req(`/api/links/${maxSlug}`, {
+    method: "PATCH",
+    body: JSON.stringify({ maxHits: 1 }),
+  });
+  assert(maxDec.res.status === 400, "maxHits decrease should fail");
+  const maxInc = await req(`/api/links/${maxSlug}`, {
+    method: "PATCH",
+    body: JSON.stringify({ maxHits: 5 }),
+  });
+  assert(maxInc.res.status === 200, "maxHits increase should succeed");
+
+  // Idempotent create
+  const idemSlug = `idem${Date.now().toString(36)}`;
+  const idemKey = `smoke-idem-${Date.now()}`;
+  const idem1 = await req("/api/links", {
+    method: "POST",
+    headers: { "idempotency-key": idemKey },
+    body: JSON.stringify({
+      destination: "https://example.com/idem",
+      slug: idemSlug,
+    }),
+  });
+  assert(idem1.res.status === 201, "idempotent create failed");
+  const idem2 = await req("/api/links", {
+    method: "POST",
+    headers: { "idempotency-key": idemKey },
+    body: JSON.stringify({
+      destination: "https://example.com/idem-retry",
+      slug: `${idemSlug}-other`,
+    }),
+  });
+  assert(idem2.res.status === 200, "idempotent replay should 200");
+  assert(idem2.json?.link?.slug === idemSlug, "idempotent replay should return same slug");
+
+  // Cursor pagination walk
+  const pageSlugs = [];
+  for (let i = 0; i < 3; i++) {
+    const s = `page${i}${Date.now().toString(36)}`;
+    pageSlugs.push(s);
+    const c = await req("/api/links", {
+      method: "POST",
+      body: JSON.stringify({
+        destination: `https://example.com/page/${i}`,
+        slug: s,
+      }),
+    });
+    assert(c.res.status === 201, `page create ${i} failed`);
+  }
+  const seen = new Set();
+  let cursor;
+  for (let guard = 0; guard < 20; guard++) {
+    const qs = new URLSearchParams({ limit: "2" });
+    if (cursor) qs.set("cursor", cursor);
+    const page = await req(`/api/links?${qs}`);
+    assert(page.res.status === 200, "list page failed");
+    for (const link of page.json?.links ?? []) {
+      assert(!seen.has(link.slug), `duplicate slug in pagination: ${link.slug}`);
+      seen.add(link.slug);
+    }
+    cursor = page.json?.nextCursor;
+    if (!cursor) break;
+  }
+  for (const s of pageSlugs) {
+    assert(seen.has(s), `pagination missed ${s}`);
+  }
+
+  // Metrics scrape
+  const metrics = await req("/api/metrics");
+  assert(metrics.res.status === 200, "metrics failed");
+  assert(
+    metrics.text.includes("blink_redirects_total"),
+    "metrics missing blink_redirects_total",
+  );
+
+  // Hits series endpoint
+  const hits = await req(`/api/links/${slug}/hits`);
+  assert(hits.res.status === 200, `hits series failed: ${hits.text}`);
+  assert(Array.isArray(hits.json?.points), "hits points missing");
+
   await req(`/api/links/${slug}`, { method: "DELETE" });
   await req(`/api/links/${utmSlug}`, { method: "DELETE" });
   await req(`/api/links/${pwSlug}`, { method: "DELETE" });
   await req(`/api/links/${expiredSlug}`, { method: "DELETE" });
   await req(`/api/links/${qSlug}`, { method: "DELETE" });
+  await req(`/api/links/${maxSlug}`, { method: "DELETE" });
+  await req(`/api/links/${idemSlug}`, { method: "DELETE" });
+  for (const s of pageSlugs) {
+    await req(`/api/links/${s}`, { method: "DELETE" });
+  }
 
   console.log("Smoke OK");
 }

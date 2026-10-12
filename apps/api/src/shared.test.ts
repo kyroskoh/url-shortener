@@ -1,12 +1,30 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { applyUtmParams, isReservedSlug, parseDestination } from "@blink/shared";
+import {
+  applyUtmParams,
+  isReservedSlug,
+  isValidSlug,
+  parseDestination,
+  slugSchema,
+} from "@blink/shared";
 
 describe("shared validation", () => {
   it("rejects reserved slugs", () => {
     assert.equal(isReservedSlug("api"), true);
     assert.equal(isReservedSlug("admin"), true);
     assert.equal(isReservedSlug("hello"), false);
+  });
+
+  it("allows only alphanumeric, hyphen, and underscore in slugs", () => {
+    assert.equal(isValidSlug("abc-123_XYZ"), true);
+    assert.equal(isValidSlug("a"), true);
+    assert.equal(isValidSlug(""), false);
+    assert.equal(isValidSlug("has space"), false);
+    assert.equal(isValidSlug("has.dot"), false);
+    assert.equal(isValidSlug("has/slash"), false);
+    assert.equal(isValidSlug("café"), false);
+    assert.equal(slugSchema.safeParse("ok_slug-1").success, true);
+    assert.equal(slugSchema.safeParse("bad!").success, false);
   });
 
   it("rejects dangerous schemes", () => {

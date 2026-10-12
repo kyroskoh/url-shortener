@@ -301,3 +301,12 @@ button:disabled {
   border-radius: 0.5rem;
   background: #fff;
 }
+
+.hits-chart {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  margin: 0.75rem 0;
+  color: var(--accent, #1a6b4a);
+}

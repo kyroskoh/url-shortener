@@ -1,8 +1,9 @@
-import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
 import {
   applyUtmParams,
   createLinkSchema,
   isReservedSlug,
+  isValidSlug,
   linkStatusSchema,
   parseDestination,
   updateLinkSchema,
@@ -15,8 +16,16 @@ import {
 import { hashLinkPassword } from "./auth.js";
 import { config, shortUrl } from "./config.js";
 import { db } from "./db/client.js";
-import { linkTags, links, tags, type Link } from "./db/schema.js";
-import { cacheDel, cacheGet, cacheSet, bumpHit, previewCacheDel } from "./redis.js";
+import { hitAggregates, linkTags, links, tags, type Link } from "./db/schema.js";
+import {
+  cacheDel,
+  cacheGet,
+  cacheSet,
+  bumpHit,
+  pendingHits,
+  previewCacheDel,
+} from "./redis.js";
+import { cacheHitsTotal, cacheMissesTotal, redirectsTotal } from "./metrics.js";
 import { randomSlug } from "./slug.js";
 import {
   folderExists,
@@ -24,6 +33,7 @@ import {
   tagsForSlugs,
 } from "./tags-folders.js";
 import { checkDestinationUrl } from "./url-check.js";
+import { notifyHitWebhook } from "./webhooks.js";
 
 async function toDto(row: Link, tagList?: TagDto[]): Promise<LinkDto> {
   const status = (row.status === "quarantined" ? "quarantined" : "active") as LinkStatus;
@@ -44,6 +54,7 @@ async function toDto(row: Link, tagList?: TagDto[]): Promise<LinkDto> {
     shortUrl: shortUrl(row.slug),
     hasPassword: Boolean(row.passwordHash),
     oneTime: Boolean(row.oneTime),
+    maxHits: row.maxHits ?? null,
     folderId: row.folderId,
     tags: resolvedTags,
   };
@@ -57,13 +68,46 @@ export type ListFilters = {
   q?: string;
   tag?: string;
   folder?: string;
+  cursor?: string;
+  limit?: number;
 };
 
-export async function listLinks(filters: ListFilters = {}): Promise<LinkDto[]> {
-  const { q, tag, folder } = filters;
-  let rows: Link[];
+export type ListResult = {
+  links: LinkDto[];
+  nextCursor: string | null;
+};
 
+const DEFAULT_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 100;
+
+export function encodeListCursor(createdAt: Date, slug: string): string {
+  return Buffer.from(`${createdAt.toISOString()}|${slug}`, "utf8").toString(
+    "base64url",
+  );
+}
+
+export function decodeListCursor(
+  cursor: string,
+): { createdAt: Date; slug: string } | null {
+  try {
+    const raw = Buffer.from(cursor, "base64url").toString("utf8");
+    const idx = raw.indexOf("|");
+    if (idx < 0) return null;
+    const createdAt = new Date(raw.slice(0, idx));
+    const slug = raw.slice(idx + 1);
+    if (!slug || Number.isNaN(createdAt.getTime())) return null;
+    return { createdAt, slug };
+  } catch {
+    return null;
+  }
+}
+
+async function buildListConditions(
+  filters: ListFilters,
+): Promise<ReturnType<typeof and> | undefined | "empty"> {
+  const { q, tag, folder, cursor } = filters;
   const conditions = [];
+
   if (q && q.trim()) {
     const pattern = `%${q.trim()}%`;
     conditions.push(
@@ -86,22 +130,72 @@ export async function listLinks(filters: ListFilters = {}): Promise<LinkDto[]> {
       .innerJoin(tags, eq(linkTags.tagId, tags.id))
       .where(or(eq(tags.name, tagName), eq(tags.id, tagName)));
     const slugList = tagged.map((t) => t.slug);
-    if (!slugList.length) return [];
+    if (!slugList.length) return "empty";
     conditions.push(inArray(links.slug, slugList));
   }
 
-  if (conditions.length) {
-    rows = await db
-      .select()
-      .from(links)
-      .where(and(...conditions))
-      .orderBy(desc(links.createdAt));
-  } else {
-    rows = await db.select().from(links).orderBy(desc(links.createdAt));
+  if (cursor && cursor.trim()) {
+    const decoded = decodeListCursor(cursor.trim());
+    if (!decoded) return "empty";
+    conditions.push(
+      or(
+        lt(links.createdAt, decoded.createdAt),
+        and(eq(links.createdAt, decoded.createdAt), lt(links.slug, decoded.slug)),
+      ),
+    );
   }
 
-  const tagMap = await tagsForSlugs(rows.map((r) => r.slug));
-  return Promise.all(rows.map((r) => toDto(r, tagMap.get(r.slug) ?? [])));
+  if (!conditions.length) return undefined;
+  return and(...conditions);
+}
+
+export async function listLinks(filters: ListFilters = {}): Promise<ListResult> {
+  const limitRaw = filters.limit ?? DEFAULT_PAGE_LIMIT;
+  const limit = Math.min(
+    MAX_PAGE_LIMIT,
+    Math.max(1, Number.isFinite(limitRaw) ? Math.floor(limitRaw) : DEFAULT_PAGE_LIMIT),
+  );
+
+  const where = await buildListConditions(filters);
+  if (where === "empty") {
+    return { links: [], nextCursor: null };
+  }
+
+  const rows = await db
+    .select()
+    .from(links)
+    .where(where)
+    .orderBy(desc(links.createdAt), desc(links.slug))
+    .limit(limit + 1);
+
+  const page = rows.slice(0, limit);
+  const tagMap = await tagsForSlugs(page.map((r) => r.slug));
+  const dtos = await Promise.all(
+    page.map((r) => toDto(r, tagMap.get(r.slug) ?? [])),
+  );
+
+  let nextCursor: string | null = null;
+  if (rows.length > limit) {
+    const last = page[page.length - 1];
+    nextCursor = encodeListCursor(last.createdAt, last.slug);
+  }
+
+  return { links: dtos, nextCursor };
+}
+
+/** Walk all pages for export / internal full dumps. */
+export async function listAllLinks(
+  filters: Omit<ListFilters, "cursor" | "limit"> = {},
+): Promise<LinkDto[]> {
+  const out: LinkDto[] = [];
+  let cursor: string | undefined;
+  for (;;) {
+    const page = await listLinks({ ...filters, cursor, limit: MAX_PAGE_LIMIT });
+    out.push(...page.links);
+    if (!page.nextCursor) break;
+    cursor = page.nextCursor;
+  }
+  return out;
 }
 
 export async function getLink(slug: string): Promise<LinkDto | null> {
@@ -135,6 +229,43 @@ async function resolveFolderId(
     return { ok: false, message: "Folder not found" };
   }
   return { ok: true, folderId };
+}
+
+function hourBucketUtc(d = new Date()): Date {
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours()),
+  );
+}
+
+export async function getHitSeries(
+  slug: string,
+  from?: Date,
+  to?: Date,
+): Promise<{ points: { t: string; hits: number }[] } | null> {
+  const row = await getLinkRow(slug);
+  if (!row) return null;
+
+  const end = to ?? new Date();
+  const start = from ?? new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const rows = await db
+    .select()
+    .from(hitAggregates)
+    .where(
+      and(
+        eq(hitAggregates.slug, slug),
+        gte(hitAggregates.bucketStart, start),
+        lte(hitAggregates.bucketStart, end),
+      ),
+    )
+    .orderBy(asc(hitAggregates.bucketStart));
+
+  return {
+    points: rows.map((r) => ({
+      t: r.bucketStart.toISOString(),
+      hits: Number(r.hits),
+    })),
+  };
 }
 
 export async function createLink(input: CreateLinkInput): Promise<CreateResult> {
@@ -172,6 +303,14 @@ export async function createLink(input: CreateLinkInput): Promise<CreateResult> 
   }
 
   let slug = parsed.data.slug?.trim() || randomSlug();
+  if (parsed.data.slug != null && !isValidSlug(slug)) {
+    return {
+      ok: false,
+      status: 400,
+      error: "invalid_slug",
+      message: "Slug may only contain letters, numbers, hyphens, and underscores",
+    };
+  }
   if (isReservedSlug(slug)) {
     return {
       ok: false,
@@ -215,6 +354,9 @@ export async function createLink(input: CreateLinkInput): Promise<CreateResult> 
     passwordHash = await hashLinkPassword(parsed.data.password);
   }
 
+  const maxHits =
+    parsed.data.maxHits === undefined ? null : parsed.data.maxHits;
+
   const [row] = await db
     .insert(links)
     .values({
@@ -225,6 +367,7 @@ export async function createLink(input: CreateLinkInput): Promise<CreateResult> 
       expiresAt,
       passwordHash,
       oneTime: parsed.data.oneTime ?? false,
+      maxHits,
       folderId: folder.folderId,
     })
     .returning();
@@ -258,6 +401,19 @@ export async function updateLink(
     return { ok: false, status: 404, error: "not_found", message: "Link not found" };
   }
   const current = await toDto(currentRow);
+
+  if (parsed.data.maxHits !== undefined) {
+    const next = parsed.data.maxHits;
+    const prev = currentRow.maxHits;
+    if (prev != null && next != null && next < prev) {
+      return {
+        ok: false,
+        status: 400,
+        error: "max_hits_decrease",
+        message: "Max redirects can only be increased or cleared",
+      };
+    }
+  }
 
   let destination = current.destination;
   if (parsed.data.destination !== undefined) {
@@ -309,6 +465,7 @@ export async function updateLink(
             : null,
       passwordHash,
       oneTime: parsed.data.oneTime === undefined ? undefined : parsed.data.oneTime,
+      maxHits: parsed.data.maxHits === undefined ? undefined : parsed.data.maxHits,
       folderId,
       updatedAt: new Date(),
     })
@@ -361,7 +518,7 @@ export async function resolveRedirect(
   slug: string,
   opts: { gateUnlocked?: boolean } = {},
 ): Promise<ResolveResult> {
-  if (isReservedSlug(slug)) return { status: "missing" };
+  if (!isValidSlug(slug) || isReservedSlug(slug)) return { status: "missing" };
 
   const [row] = await db.select().from(links).where(eq(links.slug, slug)).limit(1);
   if (!row) return { status: "missing" };
@@ -371,23 +528,36 @@ export async function resolveRedirect(
   }
   if (isExpired(row)) return { status: "expired" };
 
+  if (row.maxHits != null) {
+    const pending = await pendingHits(slug);
+    if (Number(row.hits) + pending >= row.maxHits) {
+      return { status: "expired" };
+    }
+  }
+
   if (row.passwordHash && !opts.gateUnlocked) {
     return { status: "password_required", slug };
   }
 
-  const cacheable = !row.passwordHash && !row.oneTime;
+  const cacheable = !row.passwordHash && !row.oneTime && row.maxHits == null;
   if (cacheable) {
     const cached = await cacheGet(slug);
     if (cached) {
       void bumpHit(slug);
+      cacheHitsTotal.inc();
+      redirectsTotal.inc();
+      notifyHitWebhook(slug);
       return { status: "ok", destination: cached, oneTime: false, slug };
     }
   }
 
+  cacheMissesTotal.inc();
   if (cacheable) {
     await cacheSet(slug, row.destination);
   }
   void bumpHit(slug);
+  redirectsTotal.inc();
+  notifyHitWebhook(slug);
   return {
     status: "ok",
     destination: row.destination,
@@ -401,6 +571,7 @@ export async function burnOneTimeLink(slug: string): Promise<void> {
 }
 
 export async function flushHitCounters(counts: Map<string, number>): Promise<void> {
+  const bucket = hourBucketUtc();
   for (const [slug, n] of counts) {
     await db
       .update(links)
@@ -409,13 +580,21 @@ export async function flushHitCounters(counts: Map<string, number>): Promise<voi
         lastHitAt: new Date(),
       })
       .where(eq(links.slug, slug));
+
+    await db
+      .insert(hitAggregates)
+      .values({ slug, bucketStart: bucket, hits: n })
+      .onConflictDoUpdate({
+        target: [hitAggregates.slug, hitAggregates.bucketStart],
+        set: { hits: sql`${hitAggregates.hits} + ${n}` },
+      });
   }
 }
 
 export async function exportCsv(): Promise<string> {
-  const rows = await listLinks();
+  const rows = await listAllLinks();
   const header =
-    "slug,destination,notes,status,hits,lastHitAt,expiresAt,createdAt,shortUrl,oneTime,hasPassword,folderId,tags";
+    "slug,destination,notes,status,hits,maxHits,lastHitAt,expiresAt,createdAt,shortUrl,oneTime,hasPassword,folderId,tags";
   const lines = rows.map((r) =>
     [
       r.slug,
@@ -423,6 +602,7 @@ export async function exportCsv(): Promise<string> {
       csvEscape(r.notes ?? ""),
       r.status,
       r.hits,
+      r.maxHits ?? "",
       r.lastHitAt ?? "",
       r.expiresAt ?? "",
       r.createdAt,

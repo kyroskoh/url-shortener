@@ -19,6 +19,9 @@ docker compose up --build
 | http://localhost/admin/ | Web UI (nginx → web) |
 | http://localhost/api/ | API (nginx → api) |
 | http://localhost/api/docs | OpenAPI UI |
+| http://localhost/api/health | Liveness |
+| http://localhost/api/ready | Readiness |
+| http://localhost/api/metrics | Prometheus scrape |
 | http://localhost/{slug} | Redirect (nginx → api) |
 
 Data volumes: `blink_pg_data`, `blink_redis_data`.
@@ -48,6 +51,9 @@ All app settings use the `BLINK_*` prefix. See [`.env.example`](../.env.example)
 | `BLINK_URL_CHECK_BLOCKLIST_PATH` | empty | Host blocklist file |
 | `BLINK_URL_CHECK_HTTP_URL` | empty | External URL check endpoint |
 | `BLINK_PREVIEW_TTL_SEC` | `3600` | Destination preview Redis TTL |
+| `BLINK_WEBHOOK_URL` | empty | Hit webhook POST URL (off when empty) |
+| `BLINK_WEBHOOK_SECRET` | empty | HMAC secret for `X-Blink-Signature` |
+| `BLINK_IDEMPOTENCY_TTL_SEC` | `86400` | Create `Idempotency-Key` Redis TTL |
 | `BLINK_LANDING_PAGE` | empty | In-container path to custom HTML for `/` |
 | `DATABASE_URL` | compose default | Postgres |
 | `REDIS_URL` | compose default | Redis |

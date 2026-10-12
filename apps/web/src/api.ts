@@ -14,6 +14,7 @@ export type Link = {
   shortUrl: string;
   hasPassword: boolean;
   oneTime: boolean;
+  maxHits: number | null;
   folderId: string | null;
   tags: Tag[];
 };
@@ -36,6 +37,10 @@ export type Preview = {
   title: string | null;
   favicon: string | null;
   cached: boolean;
+};
+
+export type HitSeries = {
+  points: { t: string; hits: number }[];
 };
 
 export type ImportResult = {
@@ -76,7 +81,13 @@ async function req<T>(
   return { status: res.status, data: undefined as T };
 }
 
-export type ListParams = { q?: string; tag?: string; folder?: string };
+export type ListParams = {
+  q?: string;
+  tag?: string;
+  folder?: string;
+  cursor?: string;
+  limit?: number;
+};
 
 function listQuery(params?: ListParams): string {
   if (!params) return "";
@@ -84,6 +95,8 @@ function listQuery(params?: ListParams): string {
   if (params.q) sp.set("q", params.q);
   if (params.tag) sp.set("tag", params.tag);
   if (params.folder) sp.set("folder", params.folder);
+  if (params.cursor) sp.set("cursor", params.cursor);
+  if (params.limit != null) sp.set("limit", String(params.limit));
   const s = sp.toString();
   return s ? `?${s}` : "";
 }
@@ -98,7 +111,9 @@ export const api = {
   logout: () => req<{ ok: boolean }>("/auth/logout", { method: "POST" }),
   me: () => req<{ authenticated: boolean }>("/auth/me"),
   list: (params?: ListParams) =>
-    req<{ links: Link[] }>(`/links${listQuery(params)}`),
+    req<{ links: Link[]; nextCursor: string | null }>(
+      `/links${listQuery(params)}`,
+    ),
   create: (body: Record<string, unknown>) =>
     req<{ link: Link; warnings: string[] }>("/links", {
       method: "POST",
@@ -120,6 +135,15 @@ export const api = {
     }),
   preview: (slug: string) =>
     req<Preview>(`/links/${encodeURIComponent(slug)}/preview`),
+  hits: (slug: string, from?: string, to?: string) => {
+    const sp = new URLSearchParams();
+    if (from) sp.set("from", from);
+    if (to) sp.set("to", to);
+    const q = sp.toString();
+    return req<HitSeries>(
+      `/links/${encodeURIComponent(slug)}/hits${q ? `?${q}` : ""}`,
+    );
+  },
   importCsv: (csv: string, dryRun: boolean) =>
     req<ImportResult>(`/links/import?dryRun=${dryRun ? "true" : "false"}`, {
       method: "POST",

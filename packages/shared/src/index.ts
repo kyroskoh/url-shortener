@@ -1,20 +1,143 @@
 import { z } from "zod";
 
 export const RESERVED_SLUGS = new Set([
+  // App / API routes
   "api",
   "admin",
   "app",
+  "auth",
   "login",
   "logout",
-  "healthz",
-  "readyz",
+  "config",
+  "links",
+  "tags",
+  "folders",
+  "r",
   "docs",
+  "health",
+  "healthz",
+  "ready",
+  "readyz",
+  "metrics",
+  "prometheus",
+  "site-home",
+  // Static / SEO / well-known
   "assets",
   "static",
+  "public",
+  "css",
+  "js",
+  "img",
+  "images",
+  "media",
   "favicon.ico",
   "robots.txt",
   "sitemap.xml",
-  "site-home",
+  "well-known",
+  // Brand / product paths
+  "blink",
+  "layurl",
+  "lay",
+  "url",
+  "urls",
+  "direct",
+  "redirect",
+  "short",
+  "shorten",
+  "shortener",
+  "link",
+  "go",
+  "out",
+  "click",
+  "jump",
+  // Auth / account
+  "oauth",
+  "sso",
+  "callback",
+  "account",
+  "accounts",
+  "user",
+  "users",
+  "me",
+  "session",
+  "sessions",
+  "register",
+  "registration",
+  "signup",
+  "sign-up",
+  "signin",
+  "sign-in",
+  "signout",
+  "sign-out",
+  "join",
+  "subscribe",
+  "unsubscribe",
+  "password",
+  "passwd",
+  "reset",
+  "forgot",
+  "forgot-password",
+  "reset-password",
+  "change-password",
+  "verify",
+  "verification",
+  "confirm",
+  "confirmation",
+  "activate",
+  "activation",
+  "invite",
+  "invitation",
+  "profile",
+  "profiles",
+  "member",
+  "members",
+  "membership",
+  "billing",
+  "checkout",
+  "pricing",
+  "plans",
+  "onboarding",
+  "welcome",
+
+  // Ops / marketing pages operators often want
+  "status",
+  "dashboard",
+  "console",
+  "panel",
+  "settings",
+  "help",
+  "support",
+  "about",
+  "contact",
+  "terms",
+  "privacy",
+  "legal",
+  "tos",
+  "blog",
+  "news",
+  "press",
+  // Integrations / features
+  "webhook",
+  "webhooks",
+  "hooks",
+  "qr",
+  "preview",
+  "stats",
+  "analytics",
+  "export",
+  "import",
+  "swagger",
+  "openapi",
+  // Common probes / traps
+  "www",
+  "home",
+  "index",
+  "null",
+  "undefined",
+  "wp-admin",
+  "wordpress",
+  ".git",
+  "env",
   "",
 ]);
 
@@ -29,11 +152,23 @@ export const DANGEROUS_SCHEMES = new Set([
 
 export const DEFAULT_PROTOCOLS = new Set(["http", "https", "ftp", "magnet"]);
 
+/** Allowed slug characters: letters, digits, hyphen, underscore only. */
+export const SLUG_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
+export function isValidSlug(slug: string): boolean {
+  return (
+    typeof slug === "string" &&
+    slug.length >= 1 &&
+    slug.length <= 64 &&
+    SLUG_PATTERN.test(slug)
+  );
+}
+
 export const slugSchema = z
   .string()
   .min(1)
   .max(64)
-  .regex(/^[a-zA-Z0-9_-]+$/, "Slug must be alphanumeric, hyphen, or underscore");
+  .regex(SLUG_PATTERN, "Slug may only contain letters, numbers, hyphens, and underscores");
 
 const utmField = z.string().max(256).optional().nullable();
 
@@ -50,6 +185,7 @@ export const createLinkSchema = z.object({
   utmContent: utmField,
   password: z.string().min(1).max(256).optional().nullable(),
   oneTime: z.boolean().optional(),
+  maxHits: z.number().int().min(1).max(1_000_000).optional().nullable(),
   tagNames: z.array(z.string().min(1).max(64)).max(50).optional(),
   tagIds: z.array(z.string().uuid()).max(50).optional(),
   folderId: z.string().uuid().optional().nullable(),
@@ -65,6 +201,7 @@ export const updateLinkSchema = z.object({
   password: z.string().min(1).max(256).optional().nullable(),
   clearPassword: z.boolean().optional(),
   oneTime: z.boolean().optional(),
+  maxHits: z.number().int().min(1).max(1_000_000).optional().nullable(),
   tagNames: z.array(z.string().min(1).max(64)).max(50).optional(),
   tagIds: z.array(z.string().uuid()).max(50).optional(),
   folderId: z.string().uuid().optional().nullable(),
@@ -180,6 +317,7 @@ export type LinkDto = {
   shortUrl: string;
   hasPassword: boolean;
   oneTime: boolean;
+  maxHits: number | null;
   folderId: string | null;
   tags: TagDto[];
 };

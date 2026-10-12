@@ -34,7 +34,7 @@ async function main() {
       info: {
         title: "Blink API",
         description: "URL shortener API for layurl.com",
-        version: "0.3.0",
+        version: "0.4.0",
       },
     },
   });
@@ -64,8 +64,8 @@ async function main() {
     const { slug } = request.params;
     if (
       slug === "docs" ||
-      slug === "healthz" ||
-      slug === "readyz" ||
+      slug === "health" ||
+      slug === "ready" ||
       slug === "config" ||
       slug === "links" ||
       slug === "auth" ||
@@ -73,7 +73,8 @@ async function main() {
       slug === "tags" ||
       slug === "folders" ||
       slug === "site-home" ||
-      slug === "admin"
+      slug === "admin" ||
+      slug === "metrics"
     ) {
       return reply.callNotFound();
     }

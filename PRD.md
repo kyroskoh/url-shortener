@@ -12,8 +12,8 @@ Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url), rebuilt on N
 | **Host** | layurl.com |
 | **Repo** | url-shortener |
 | **Owner** | Operator / maintainer of this repository |
-| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phase 2 ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0), patch [v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)); Phases 3–4 remain implementable from this PRD |
-| **Current phase** | Phase 2 complete ([v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)); next is **Phase 3 — Analytics and integrations** |
+| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phase 2 ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0), patch [v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)); Phase 3 ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0)); Phase 4 remains implementable from this PRD |
+| **Current phase** | Phase 3 complete ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0)); next is **Phase 4 — Ops and scale** |
 
 ## Problem
 
@@ -26,7 +26,8 @@ Most URL shorteners are bloated, hard to self-host, or lack essentials (custom s
 - Phase 0 application (MVP) + documentation + Cloudflare provisioner — **done** ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0))
 - Phase 1 trust/abuse features — **done**
 - Phase 2 product depth — **done**
-- Full specifications for Phases 3–4 product features (this document; Phase 3 is next to implement)
+- Phase 3 analytics and integrations — **done** ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0))
+- Full specification for Phase 4 (this document; Phase 4 is next to implement)
 
 ### Non-goals (all phases)
 
@@ -79,10 +80,10 @@ None (greenfield).
 7. Public mode: create without auth; list/delete require admin.
 8. Custom site title; optional disable frontend.
 9. Protocol allowlist: `http`, `https`, `ftp`, `magnet` + `BLINK_EXTRA_PROTOCOLS`.
-10. Reserved slugs blocked (`api`, `admin`, `healthz`, app paths, etc.).
+10. Reserved slugs blocked (`api`, `admin`, `health`, app paths, etc.).
 11. Reject dangerous schemes (`javascript:`, `data:`, etc.) even if protocols widened.
 12. Redis redirect cache + Redis rate limiting (CF-Connecting-IP aware).
-13. OpenAPI at `/docs`; `/healthz`, `/readyz`; structured JSON logs.
+13. OpenAPI at `/docs`; `/health`, `/ready`; structured JSON logs.
 14. CSV export (admin).
 15. Turnstile on public create when `BLINK_TURNSTILE_*` set; skip when unset.
 16. Copy/share on create; warn when destination already has a slug.
@@ -113,7 +114,7 @@ None (greenfield).
 
 ## Implementing Phase 1–4 product features
 
-Phases **0–2** are complete. Phase **3** is the active implementation target. Phase **4** remains fully specified below for later passes without re-discovery.
+Phases **0–3** are complete. Phase **4** is the active implementation target and remains fully specified below.
 
 ---
 
@@ -218,7 +219,7 @@ Phase 0 (and Phase 1 status field recommended for one-time/disabled interplay).
 
 ---
 
-## Phase 3 — Analytics and integrations
+## Phase 3 — Analytics and integrations (complete)
 
 ### Goal
 
@@ -236,6 +237,7 @@ Phase 0 redirects/hits; Phase 2 pagination helpful for large lists.
 4. Cursor pagination on link list
 5. OpenAPI-generated typed client; CLI client
 6. Prometheus metrics
+7. Per-link max redirects (`maxHits`); edit may only increase or clear
 
 ### Functional requirements
 
@@ -248,15 +250,17 @@ Phase 0 redirects/hits; Phase 2 pagination helpful for large lists.
 | P3-R5 | `GET /api/links?cursor=&limit=` cursor pagination; deprecate unbounded dump |
 | P3-R6 | Published typed client from OpenAPI; `blink` CLI for create/list/delete |
 | P3-R7 | `/metrics` Prometheus: `blink_redirects_total`, `blink_cache_hits_total`, `blink_cache_misses_total` |
+| P3-R8 | Optional `maxHits`; when reached → branded 410; PATCH cannot decrease a finite cap |
 
 ### Acceptance criteria
 
-- [ ] After N redirects, time-series points match N within aggregation window
-- [ ] Webhook delivered with valid HMAC; invalid secret rejected by test consumer
-- [ ] Idempotent create does not duplicate slugs
-- [ ] Pagination walks full set without duplicates/skips
-- [ ] CLI creates a link against local compose
-- [ ] Prometheus scrape shows counters incrementing
+- [x] After N redirects, time-series points match N within aggregation window
+- [x] Webhook delivered with valid HMAC; invalid secret rejected by test consumer
+- [x] Idempotent create does not duplicate slugs
+- [x] Pagination walks full set without duplicates/skips
+- [x] CLI creates a link against local compose
+- [x] Prometheus scrape shows counters incrementing
+- [x] maxHits enforce + monotonic edit increase/clear
 
 ### Non-goals (Phase 3)
 
@@ -265,7 +269,8 @@ Phase 0 redirects/hits; Phase 2 pagination helpful for large lists.
 
 ### Verification
 
-- Contract tests for webhooks/HMAC; load smoke for pagination; metrics scrape check
+- Contract tests for webhooks/HMAC; load smoke for pagination; metrics scrape check — **passed** (`npm test`, `docker compose up --build`, `npm run smoke`, CLI create)
+- Release: [v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0)
 
 ---
 

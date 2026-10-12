@@ -10,6 +10,7 @@ const CACHE_PREFIX = "blink:redir:";
 const HITS_PREFIX = "blink:hits:";
 const RATE_PREFIX = "blink:rate:";
 const PREVIEW_PREFIX = "blink:preview:";
+const IDEM_PREFIX = "blink:idem:";
 
 export async function cacheGet(slug: string): Promise<string | null> {
   return redis.get(CACHE_PREFIX + slug);
@@ -25,6 +26,11 @@ export async function cacheDel(slug: string): Promise<void> {
 
 export async function bumpHit(slug: string): Promise<void> {
   await redis.incr(HITS_PREFIX + slug);
+}
+
+export async function pendingHits(slug: string): Promise<number> {
+  const n = await redis.get(HITS_PREFIX + slug);
+  return n ? Number(n) : 0;
 }
 
 export async function drainHits(): Promise<Map<string, number>> {
@@ -59,4 +65,12 @@ export async function previewCacheSet(slug: string, json: string): Promise<void>
 
 export async function previewCacheDel(slug: string): Promise<void> {
   await redis.del(PREVIEW_PREFIX + slug);
+}
+
+export async function idempotencyGet(key: string): Promise<string | null> {
+  return redis.get(IDEM_PREFIX + key);
+}
+
+export async function idempotencySet(key: string, value: string): Promise<void> {
+  await redis.set(IDEM_PREFIX + key, value, "EX", config.idempotencyTtlSec);
 }

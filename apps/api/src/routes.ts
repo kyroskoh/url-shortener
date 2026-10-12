@@ -26,6 +26,7 @@ import {
   createLink,
   deleteLink,
   exportCsv,
+  getHitSeries,
   getLink,
   getLinkRow,
   listLinks,
@@ -33,8 +34,9 @@ import {
   setLinkStatus,
   updateLink,
 } from "./links.js";
+import { metricsText } from "./metrics.js";
 import { getLinkPreview } from "./preview.js";
-import { rateLimit, redis } from "./redis.js";
+import { idempotencyGet, idempotencySet, rateLimit, redis } from "./redis.js";
 import {
   createFolder,
   createTag,
@@ -54,9 +56,10 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   app.addHook("onRequest", async (request, reply) => {
     if (
-      request.url.startsWith("/healthz") ||
-      request.url.startsWith("/readyz") ||
-      request.url.startsWith("/site-home")
+      request.url.startsWith("/health") ||
+      request.url.startsWith("/ready") ||
+      request.url.startsWith("/site-home") ||
+      request.url.startsWith("/metrics")
     ) {
       return;
     }
@@ -69,9 +72,27 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.get("/healthz", async () => ({ ok: true }));
+  app.get(
+    "/health",
+    {
+      schema: {
+        response: {
+          200: {
+            type: "object",
+            properties: { ok: { type: "boolean" } },
+          },
+        },
+      },
+    },
+    async () => ({ ok: true }),
+  );
 
-  app.get("/readyz", async (_req, reply) => {
+  app.get("/metrics", async (_req, reply) => {
+    reply.header("content-type", registerContentType());
+    return metricsText();
+  });
+
+  app.get("/ready", async (_req, reply) => {
     try {
       await queryClient`SELECT 1`;
       const pong = await redis.ping();
@@ -185,11 +206,44 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.get("/links", async (request, reply) => {
-    if (!(await requireAdmin(request, reply))) return;
-    const q = request.query as { q?: string; tag?: string; folder?: string };
-    return { links: await listLinks({ q: q.q, tag: q.tag, folder: q.folder }) };
-  });
+  app.get(
+    "/links",
+    {
+      schema: {
+        querystring: {
+          type: "object",
+          properties: {
+            q: { type: "string" },
+            tag: { type: "string" },
+            folder: { type: "string" },
+            cursor: { type: "string" },
+            limit: { type: "integer", minimum: 1, maximum: 100 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const q = request.query as {
+        q?: string;
+        tag?: string;
+        folder?: string;
+        cursor?: string;
+        limit?: string | number;
+      };
+      const limit =
+        q.limit === undefined || q.limit === ""
+          ? undefined
+          : Number(q.limit);
+      return listLinks({
+        q: q.q,
+        tag: q.tag,
+        folder: q.folder,
+        cursor: q.cursor,
+        limit: Number.isFinite(limit) ? limit : undefined,
+      });
+    },
+  );
 
   app.get("/links/export.csv", async (request, reply) => {
     if (!(await requireAdmin(request, reply))) return;
@@ -227,6 +281,25 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     const body = request.body as Record<string, unknown>;
     const isAdmin = (await requireAdminQuiet(request)) === true;
 
+    const idemRaw = request.headers["idempotency-key"];
+    const idemKey =
+      typeof idemRaw === "string" && idemRaw.trim() ? idemRaw.trim().slice(0, 256) : "";
+
+    if (idemKey) {
+      const cached = await idempotencyGet(idemKey);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached) as {
+            link: unknown;
+            warnings: string[];
+          };
+          return reply.code(200).send(parsed);
+        } catch {
+          // fall through and recreate
+        }
+      }
+    }
+
     if (!isAdmin) {
       if (!config.publicMode) {
         return reply
@@ -247,6 +320,14 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
+    let maxHits: number | null | undefined = undefined;
+    if (body.maxHits === null || body.maxHits === "") {
+      maxHits = null;
+    } else if (body.maxHits !== undefined) {
+      const n = Number(body.maxHits);
+      maxHits = Number.isFinite(n) ? n : undefined;
+    }
+
     const result = await createLink({
       destination: String(body.destination ?? ""),
       slug: body.slug ? String(body.slug) : undefined,
@@ -259,6 +340,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       utmContent: body.utmContent != null ? String(body.utmContent) : undefined,
       password: body.password != null ? String(body.password) : undefined,
       oneTime: body.oneTime === true || body.oneTime === "true",
+      maxHits,
       tagNames: Array.isArray(body.tagNames)
         ? body.tagNames.map(String)
         : undefined,
@@ -276,7 +358,11 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         .code(result.status)
         .send({ error: result.error, message: result.message });
     }
-    return reply.code(201).send({ link: result.link, warnings: result.warnings });
+    const payload = { link: result.link, warnings: result.warnings };
+    if (idemKey) {
+      await idempotencySet(idemKey, JSON.stringify(payload));
+    }
+    return reply.code(201).send(payload);
   });
 
   app.get<{ Params: { slug: string } }>("/links/:slug", async (request, reply) => {
@@ -306,9 +392,52 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
+  app.get<{ Params: { slug: string } }>(
+    "/links/:slug/hits",
+    {
+      schema: {
+        querystring: {
+          type: "object",
+          properties: {
+            from: { type: "string" },
+            to: { type: "string" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const q = request.query as { from?: string; to?: string };
+      const from = q.from ? new Date(q.from) : undefined;
+      const to = q.to ? new Date(q.to) : undefined;
+      if (from && Number.isNaN(from.getTime())) {
+        return reply
+          .code(400)
+          .send({ error: "validation_error", message: "Invalid from" });
+      }
+      if (to && Number.isNaN(to.getTime())) {
+        return reply
+          .code(400)
+          .send({ error: "validation_error", message: "Invalid to" });
+      }
+      const series = await getHitSeries(request.params.slug, from, to);
+      if (!series) {
+        return reply.code(404).send({ error: "not_found", message: "Link not found" });
+      }
+      return series;
+    },
+  );
+
   app.patch<{ Params: { slug: string } }>("/links/:slug", async (request, reply) => {
     if (!(await requireAdmin(request, reply))) return;
     const body = request.body as Record<string, unknown>;
+    let maxHits: number | null | undefined = undefined;
+    if (body.maxHits === null || body.maxHits === "") {
+      maxHits = null;
+    } else if (body.maxHits !== undefined) {
+      const n = Number(body.maxHits);
+      maxHits = Number.isFinite(n) ? n : undefined;
+    }
     const result = await updateLink(request.params.slug, {
       destination: body.destination != null ? String(body.destination) : undefined,
       notes: body.notes === undefined ? undefined : (body.notes as string | null),
@@ -324,6 +453,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
         body.oneTime === undefined
           ? undefined
           : body.oneTime === true || body.oneTime === "true",
+      maxHits,
       tagNames: Array.isArray(body.tagNames)
         ? body.tagNames.map(String)
         : undefined,
@@ -426,6 +556,10 @@ async function requireAdminQuiet(
   const apiKey = request.headers["x-api-key"];
   if (typeof apiKey === "string" && (await verifyApiKey(apiKey))) return true;
   return verifySessionToken(request.cookies?.blink_session);
+}
+
+function registerContentType(): string {
+  return "text/plain; version=0.0.4; charset=utf-8";
 }
 
 export async function handleRedirect(

@@ -29,12 +29,14 @@ export function App() {
   const [utmContent, setUtmContent] = useState("");
   const [linkPassword, setLinkPassword] = useState("");
   const [oneTime, setOneTime] = useState(false);
+  const [maxHits, setMaxHits] = useState("");
   const [tagNames, setTagNames] = useState("");
   const [folderId, setFolderId] = useState("");
   const [filter, setFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [folderFilter, setFolderFilter] = useState("");
   const [links, setLinks] = useState<Link[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [error, setError] = useState("");
@@ -45,11 +47,18 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<Link | null>(null);
   const [editTags, setEditTags] = useState("");
+  const [editMaxHitsBaseline, setEditMaxHitsBaseline] = useState<number | null>(
+    null,
+  );
   const [preview, setPreview] = useState<{
     slug: string;
     title: string | null;
     favicon: string | null;
     cached: boolean;
+  } | null>(null);
+  const [hitChart, setHitChart] = useState<{
+    slug: string;
+    points: { t: string; hits: number }[];
   } | null>(null);
   const [importCsv, setImportCsv] = useState("");
   const [importResult, setImportResult] = useState<string>("");
@@ -75,15 +84,35 @@ export function App() {
   const refreshLinks = useCallback(async () => {
     if (!authed) {
       setLinks([]);
+      setNextCursor(null);
       return;
     }
     const res = await api.list({
       q: filter || undefined,
       tag: tagFilter || undefined,
       folder: folderFilter || undefined,
+      limit: 50,
     });
-    if (res.data) setLinks(res.data.links);
+    if (res.data) {
+      setLinks(res.data.links);
+      setNextCursor(res.data.nextCursor);
+    }
   }, [authed, filter, tagFilter, folderFilter]);
+
+  async function loadMoreLinks() {
+    if (!authed || !nextCursor) return;
+    const res = await api.list({
+      q: filter || undefined,
+      tag: tagFilter || undefined,
+      folder: folderFilter || undefined,
+      cursor: nextCursor,
+      limit: 50,
+    });
+    if (res.data) {
+      setLinks((prev) => [...prev, ...res.data!.links]);
+      setNextCursor(res.data.nextCursor);
+    }
+  }
 
   useEffect(() => {
     void (async () => {
@@ -163,6 +192,7 @@ export function App() {
     setUtmContent("");
     setLinkPassword("");
     setOneTime(false);
+    setMaxHits("");
     setTagNames("");
     setFolderId("");
   }
@@ -187,6 +217,10 @@ export function App() {
       if (utmTerm.trim()) body.utmTerm = utmTerm.trim();
       if (utmContent.trim()) body.utmContent = utmContent.trim();
       if (linkPassword.trim()) body.password = linkPassword.trim();
+      if (maxHits.trim()) {
+        const n = Number(maxHits);
+        if (Number.isFinite(n) && n >= 1) body.maxHits = Math.floor(n);
+      }
       if (authed && tagNames.trim()) {
         body.tagNames = tagNames
           .split(",")
@@ -235,12 +269,22 @@ export function App() {
     e.preventDefault();
     if (!editing) return;
     setBusy(true);
+    setError("");
     try {
+      if (
+        editing.maxHits != null &&
+        editMaxHitsBaseline != null &&
+        editing.maxHits < editMaxHitsBaseline
+      ) {
+        setError("Max redirects can only be increased or cleared");
+        return;
+      }
       const res = await api.update(editing.slug, {
         destination: editing.destination,
         notes: editing.notes,
         expiresAt: editing.expiresAt,
         oneTime: editing.oneTime,
+        maxHits: editing.maxHits,
         folderId: editing.folderId,
         tagNames: editTags
           .split(",")
@@ -252,9 +296,27 @@ export function App() {
         return;
       }
       setEditing(null);
+      setEditMaxHitsBaseline(null);
       setInfo("Link updated");
       await refreshLinks();
       await refreshMeta();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function loadHits(slug: string) {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await api.hits(slug);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      if (res.data) {
+        setHitChart({ slug, points: res.data.points });
+      }
     } finally {
       setBusy(false);
     }
@@ -404,8 +466,13 @@ export function App() {
               Custom slug (optional)
               <input
                 value={slug}
-                onChange={(e) => setSlug(e.target.value)}
+                onChange={(e) =>
+                  setSlug(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))
+                }
                 placeholder="my-link"
+                pattern="[A-Za-z0-9_-]+"
+                maxLength={64}
+                title="Letters, numbers, hyphens, and underscores only"
               />
             </label>
             <label>
@@ -476,6 +543,17 @@ export function App() {
                     onChange={(e) => setOneTime(e.target.checked)}
                   />
                   <span>One-time (burn after first redirect)</span>
+                </label>
+                <label>
+                  Max redirects (optional)
+                  <input
+                    type="number"
+                    min={1}
+                    max={1_000_000}
+                    value={maxHits}
+                    onChange={(e) => setMaxHits(e.target.value)}
+                    placeholder="Unlimited"
+                  />
                 </label>
                 {authed && (
                   <>
@@ -691,6 +769,22 @@ export function App() {
             </div>
           )}
 
+          {hitChart && (
+            <div className="panel" style={{ marginBottom: "1rem" }}>
+              <p className="meta">
+                Hits (hourly) for <code>{hitChart.slug}</code>
+              </p>
+              <HitsChart points={hitChart.points} />
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setHitChart(null)}
+              >
+                Close
+              </button>
+            </div>
+          )}
+
           <div className="list">
             {links.map((link) => (
               <article className="item" key={link.slug}>
@@ -750,6 +844,29 @@ export function App() {
                       />
                       <span>One-time (burn after first redirect)</span>
                     </label>
+                    <label>
+                      Max redirects
+                      <input
+                        type="number"
+                        min={editMaxHitsBaseline ?? 1}
+                        max={1_000_000}
+                        value={editing.maxHits ?? ""}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          if (raw === "") {
+                            setEditing({ ...editing, maxHits: null });
+                            return;
+                          }
+                          const n = Number(raw);
+                          if (!Number.isFinite(n)) return;
+                          setEditing({ ...editing, maxHits: Math.floor(n) });
+                        }}
+                        placeholder="Unlimited"
+                      />
+                      <span className="meta">
+                        Can only increase or clear (not decrease).
+                      </span>
+                    </label>
                     <div className="row">
                       <button type="submit" disabled={busy}>
                         Save
@@ -757,7 +874,10 @@ export function App() {
                       <button
                         type="button"
                         className="secondary"
-                        onClick={() => setEditing(null)}
+                        onClick={() => {
+                          setEditing(null);
+                          setEditMaxHitsBaseline(null);
+                        }}
                       >
                         Cancel
                       </button>
@@ -775,6 +895,7 @@ export function App() {
                       {link.status === "quarantined" ? " (redirects blocked)" : ""}
                       {link.hasPassword ? " · password" : ""}
                       {link.oneTime ? " · one-time" : ""}
+                      {link.maxHits != null ? ` · max ${link.maxHits}` : ""}
                     </p>
                     {link.tags.length > 0 && (
                       <p className="meta">
@@ -803,6 +924,7 @@ export function App() {
                         className="secondary"
                         onClick={() => {
                           setEditing(link);
+                          setEditMaxHitsBaseline(link.maxHits);
                           setEditTags(link.tags.map((t) => t.name).join(", "));
                         }}
                       >
@@ -815,6 +937,14 @@ export function App() {
                         onClick={() => void loadPreview(link.slug)}
                       >
                         Preview
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={busy}
+                        onClick={() => void loadHits(link.slug)}
+                      >
+                        Hits
                       </button>
                       {link.status === "active" ? (
                         <button
@@ -854,6 +984,18 @@ export function App() {
             ))}
             {!links.length && <p className="meta">No links yet.</p>}
           </div>
+          {nextCursor && (
+            <div className="row" style={{ marginTop: "1rem" }}>
+              <button
+                type="button"
+                className="secondary"
+                disabled={busy}
+                onClick={() => void loadMoreLinks()}
+              >
+                Load more
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -861,5 +1003,41 @@ export function App() {
         Blink · hosted on layurl.com · privacy-respecting redirects
       </footer>
     </div>
+  );
+}
+
+function HitsChart({ points }: { points: { t: string; hits: number }[] }) {
+  if (!points.length) {
+    return <p className="meta">No hit data in this window yet.</p>;
+  }
+  const max = Math.max(...points.map((p) => p.hits), 1);
+  const w = 360;
+  const h = 120;
+  const pad = 8;
+  const step = points.length > 1 ? (w - pad * 2) / (points.length - 1) : 0;
+  const coords = points.map((p, i) => {
+    const x = pad + i * step;
+    const y = h - pad - (p.hits / max) * (h - pad * 2);
+    return `${x},${y}`;
+  });
+  return (
+    <svg
+      className="hits-chart"
+      viewBox={`0 0 ${w} ${h}`}
+      role="img"
+      aria-label="Hourly hit counts"
+    >
+      <polyline
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        points={coords.join(" ")}
+      />
+      {points.map((p, i) => {
+        const x = pad + i * step;
+        const y = h - pad - (p.hits / max) * (h - pad * 2);
+        return <circle key={p.t} cx={x} cy={y} r={3} fill="currentColor" />;
+      })}
+    </svg>
   );
 }

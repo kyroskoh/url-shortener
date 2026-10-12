@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-10-12
+
+### Added
+
+- Phase 3 analytics and integrations: hourly `hit_aggregates`, admin Hits chart, `GET /api/links/:slug/hits`
+- Optional per-link `maxHits` (max redirects) in Advanced options; edit may only increase or clear
+- Hit webhooks via `BLINK_WEBHOOK_URL` / `BLINK_WEBHOOK_SECRET` with `X-Blink-Signature` HMAC-SHA256
+- Idempotent create with `Idempotency-Key` (Redis TTL `BLINK_IDEMPOTENCY_TTL_SEC`)
+- Cursor pagination on `GET /api/links?cursor=&limit=` (`nextCursor`); admin Load more
+- Prometheus `GET /api/metrics` (`blink_redirects_total`, `blink_cache_hits_total`, `blink_cache_misses_total`)
+- `@blink/client` typed client + `blink` CLI (`create` / `list` / `delete`)
+- [ENHANCEMENT.md](ENHANCEMENT.md) backlog for post–Phase 3 ideas
+- Expanded reserved slugs (product paths, auth/signup keywords, probes)
+- Slug charset enforcement: letters, numbers, hyphen, underscore only
+
+### Changed
+
+- Liveness `/api/healthz` → `/api/health`; readiness `/api/readyz` → `/api/ready` (legacy names remain reserved)
+
+### Verified
+
+- Local compose rebuild + `npm run smoke` + `blink` CLI create against localhost
+
 ## [0.3.1] — 2026-10-12
 
 ### Fixed
@@ -58,6 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed locked `drizzle-kit` (use `npx drizzle-kit@0.31.11 generate` when needed) to drop nested vulnerable `esbuild` / `@esbuild-kit` chain
 - `npm audit`: 0 vulnerabilities
 
+[0.4.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0
 [0.3.1]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1
 [0.3.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0
 [0.2.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0

@@ -1,0 +1,216 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Blink API",
+    "description": "URL shortener API for layurl.com",
+    "version": "0.4.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Liveness",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "ok": { "type": "boolean" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "operationId": "getReady",
+        "summary": "Readiness",
+        "responses": {
+          "200": { "description": "Ready" },
+          "503": { "description": "Not ready" }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "operationId": "getMetrics",
+        "summary": "Prometheus metrics",
+        "responses": {
+          "200": { "description": "Prometheus text" }
+        }
+      }
+    },
+    "/links": {
+      "get": {
+        "operationId": "listLinks",
+        "summary": "List links (cursor pagination)",
+        "parameters": [
+          { "name": "q", "in": "query", "schema": { "type": "string" } },
+          { "name": "tag", "in": "query", "schema": { "type": "string" } },
+          { "name": "folder", "in": "query", "schema": { "type": "string" } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of links",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LinkList" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createLink",
+        "summary": "Create link",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateLink" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CreateLinkResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/links/{slug}": {
+      "delete": {
+        "operationId": "deleteLink",
+        "summary": "Delete link",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Deleted" },
+          "404": { "description": "Not found" }
+        }
+      }
+    },
+    "/links/{slug}/hits": {
+      "get": {
+        "operationId": "getLinkHits",
+        "summary": "Hit time series",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          { "name": "from", "in": "query", "schema": { "type": "string" } },
+          { "name": "to", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Points",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HitSeries" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Link": {
+        "type": "object",
+        "properties": {
+          "slug": { "type": "string" },
+          "destination": { "type": "string" },
+          "notes": { "type": ["string", "null"] },
+          "status": { "type": "string", "enum": ["active", "quarantined"] },
+          "hits": { "type": "number" },
+          "maxHits": { "type": ["number", "null"] },
+          "shortUrl": { "type": "string" },
+          "oneTime": { "type": "boolean" },
+          "hasPassword": { "type": "boolean" }
+        }
+      },
+      "LinkList": {
+        "type": "object",
+        "properties": {
+          "links": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Link" }
+          },
+          "nextCursor": { "type": ["string", "null"] }
+        }
+      },
+      "CreateLink": {
+        "type": "object",
+        "required": ["destination"],
+        "properties": {
+          "destination": { "type": "string" },
+          "slug": { "type": "string" },
+          "notes": { "type": ["string", "null"] },
+          "maxHits": { "type": ["number", "null"] },
+          "oneTime": { "type": "boolean" }
+        }
+      },
+      "CreateLinkResponse": {
+        "type": "object",
+        "properties": {
+          "link": { "$ref": "#/components/schemas/Link" },
+          "warnings": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "HitSeries": {
+        "type": "object",
+        "properties": {
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "t": { "type": "string" },
+                "hits": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  }
+}
