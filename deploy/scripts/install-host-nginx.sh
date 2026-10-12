@@ -33,13 +33,10 @@ run() {
   fi
 }
 
-# Load optional paths from deploy .env if present
+# Load optional paths from deploy .env if present (safe for $ in passwords)
 if [[ -f "$ROOT/.env" ]]; then
   # shellcheck disable=SC1091
-  set -a
-  # shellcheck source=/dev/null
-  source "$ROOT/.env"
-  set +a
+  source "$ROOT/deploy/scripts/load-env.sh" "$ROOT/.env"
 fi
 
 install_site() {

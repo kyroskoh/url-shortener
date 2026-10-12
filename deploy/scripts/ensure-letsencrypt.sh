@@ -90,13 +90,10 @@ issue_or_renew() {
 }
 
 # --- main ---
-# Allow caller to source .env first
+# Allow caller to pass .env (safe for $ in passwords; unlike raw `source`)
 if [[ -f "${1:-}" ]]; then
-  # shellcheck disable=SC1090
-  set -a
-  # shellcheck source=/dev/null
-  source "$1"
-  set +a
+  # shellcheck disable=SC1091
+  source "$(cd "$(dirname "$0")" && pwd)/load-env.sh" "$1"
 fi
 
 ensure_certbot

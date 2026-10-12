@@ -229,6 +229,8 @@ Do **not** reuse other sites’ certificates. Deploy issues `/etc/letsencrypt/li
    # Windows: .\scripts\ops.ps1 cf-dry-run
    ```
 
+   Run `ops:*` on your **laptop** (needs `gh`), not on the origin VPS. Values with `$` in `.env.production` are loaded without shell expansion; quoting (`'...'`) is still fine.
+
 4. **Ship**:
 
    ```bash

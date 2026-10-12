@@ -168,10 +168,10 @@ jobs:
           scp .env.deploy "${REMOTE}:${DEPLOY_PATH}/.env"
           scp docker-compose.yml docker-compose.prod.yml "${REMOTE}:${DEPLOY_PATH}/"
           scp deploy/nginx.conf deploy/nginx.blink-layurl.com.conf "${REMOTE}:${DEPLOY_PATH}/deploy/"
-          scp deploy/scripts/ensure-docker.sh deploy/scripts/ensure-letsencrypt.sh deploy/scripts/install-host-nginx.sh "${REMOTE}:${DEPLOY_PATH}/deploy/scripts/"
+          scp deploy/scripts/ensure-docker.sh deploy/scripts/load-env.sh deploy/scripts/ensure-letsencrypt.sh deploy/scripts/install-host-nginx.sh "${REMOTE}:${DEPLOY_PATH}/deploy/scripts/"
           ssh "$REMOTE" "set -e
             cd ${DEPLOY_PATH}
-            chmod +x deploy/scripts/ensure-docker.sh deploy/scripts/ensure-letsencrypt.sh deploy/scripts/install-host-nginx.sh
+            chmod +x deploy/scripts/ensure-docker.sh deploy/scripts/load-env.sh deploy/scripts/ensure-letsencrypt.sh deploy/scripts/install-host-nginx.sh
             ./deploy/scripts/ensure-docker.sh
             ./deploy/scripts/install-host-nginx.sh \"\$(pwd)/deploy/nginx.blink-layurl.com.conf\"
             echo '${TOKEN}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin

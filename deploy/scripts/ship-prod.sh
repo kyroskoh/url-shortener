@@ -18,11 +18,8 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-# shellcheck disable=SC1090
-set -a
-# shellcheck source=/dev/null
-source "$ENV_FILE"
-set +a
+# shellcheck disable=SC1091
+source "$ROOT/deploy/scripts/load-env.sh" "$ENV_FILE"
 
 REPO="${GITHUB_REPO:-}"
 if [[ -z "$REPO" ]]; then
