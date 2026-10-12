@@ -60,11 +60,15 @@ require CLOUDFLARE_ZONE_ID
 require CLOUDFLARE_ORIGIN_IPV4
 
 if [[ "$CF_ONLY" -eq 0 ]]; then
-  require DEPLOY_HOST
-  require DEPLOY_USER
-  require DEPLOY_SSH_KEY
+  if [[ -z "${DEPLOY_HOST:-}" || -z "${DEPLOY_USER:-}" || -z "${DEPLOY_SSH_KEY:-}" ]]; then
+    echo "Missing DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY (or DEPLOY_SSH_KEY_FILE) in .env.production." >&2
+    echo "  • Cloudflare dry-run only:  npm run ops:cf-dry-run   (after: git pull origin main)" >&2
+    echo "  • Full production ship:     set DEPLOY_SSH_KEY_FILE=/path/to/id_ed25519 then npm run ops:ship" >&2
+    echo "  • Sync CF secrets only:     bash deploy/scripts/bootstrap-github-env.sh --cf-only" >&2
+    exit 1
+  fi
 else
-  echo "Cloudflare-only bootstrap: skipping required DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY"
+  echo "Cloudflare-only bootstrap: DEPLOY_* not required"
 fi
 
 echo "Ensuring GitHub Environment '$ENV_NAME' on $REPO …"

@@ -18,6 +18,7 @@
     "cloudflare:dry-run": "node deploy/scripts/cloudflare-provision.mjs --dry-run",
     "cloudflare:apply": "node deploy/scripts/cloudflare-provision.mjs --apply",
     "ops:bootstrap": "bash deploy/scripts/bootstrap-github-env.sh",
+    "ops:bootstrap:cf": "bash deploy/scripts/bootstrap-github-env.sh --cf-only",
     "ops:ship": "bash deploy/scripts/ship-prod.sh",
     "ops:cf-dry-run": "bash deploy/scripts/ship-prod.sh --dry-run"
   },
