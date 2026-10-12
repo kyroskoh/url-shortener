@@ -51,7 +51,7 @@ Scripts never print secret values. They call [`bootstrap-github-env.sh`](../depl
 | `CLOUDFLARE_ZONE_ID` | Provisioner |
 | `CLOUDFLARE_ORIGIN_IPV4` | Provisioner |
 | `CLOUDFLARE_ORIGIN_IPV6` | Provisioner (optional) |
-| `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` | SSH deploy |
+| `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` | SSH deploy (key must be **unencrypted**; prefer `DEPLOY_SSH_KEY_FILE`) |
 | `GHCR_PULL_TOKEN` | Optional GHCR pull |
 
 ## Environment variables (non-secret)

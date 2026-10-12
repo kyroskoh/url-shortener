@@ -44,6 +44,23 @@ export function plannedZoneSettings() {
 }
 
 /**
+ * Records that block creating `desiredType` at the same name (Cloudflare exclusivity).
+ * A/AAAA cannot coexist with CNAME; same-type rows are updates, not conflicts.
+ * @param {string} desiredType
+ * @param {{ type: string, id?: string, name?: string, content?: string }[]} existing
+ */
+export function dnsConflictsForUpsert(desiredType, existing) {
+  const want = String(desiredType || "").toUpperCase();
+  return (existing || []).filter((r) => {
+    const t = String(r.type || "").toUpperCase();
+    if (!t || t === want) return false;
+    if (want === "A" || want === "AAAA") return t === "CNAME";
+    if (want === "CNAME") return t === "A" || t === "AAAA" || t === "CNAME";
+    return false;
+  });
+}
+
+/**
  * @param {{ token?: string, zoneId?: string, ipv4?: string, ipv6?: string }} opts
  */
 export function missingCredentials({ token, zoneId, ipv4, ipv6 }) {

@@ -215,7 +215,7 @@ Do **not** reuse other sites’ certificates. Deploy issues `/etc/letsencrypt/li
    | `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ZONE_ID` | Provisioner |
    | `CLOUDFLARE_ORIGIN_IPV4` (and optional IPv6) | Proxied DNS target |
    | `DEPLOY_HOST` / `DEPLOY_USER` | SSH |
-   | `DEPLOY_SSH_KEY_FILE` | Path to private key (preferred over pasting PEM) |
+   | `DEPLOY_SSH_KEY_FILE` | Path to **unencrypted** OpenSSH private key (no passphrase; Actions cannot unlock) |
    | `BLINK_IMAGE_TAG` | e.g. `v0.6.2` or `latest` |
    | `GITHUB_REPO` | `kyroskoh/url-shortener` if `gh` cannot infer |
 

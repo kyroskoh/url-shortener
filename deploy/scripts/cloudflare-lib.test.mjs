@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   CACHE_BYPASS_EXPRESSION,
+  dnsConflictsForUpsert,
   missingCredentials,
   plannedDnsRecords,
   plannedZoneSettings,
@@ -62,5 +63,27 @@ describe("cloudflare-lib", () => {
   it("exports cache bypass expression for slugs", () => {
     assert.match(CACHE_BYPASS_EXPRESSION, /A-Za-z0-9_/);
     assert.match(CACHE_BYPASS_EXPRESSION, /\/api/);
+  });
+
+  it("flags CNAME as conflict when upserting A/AAAA", () => {
+    const existing = [
+      { type: "CNAME", id: "1", name: "layurl.com", content: "example.com" },
+      { type: "A", id: "2", name: "layurl.com", content: "1.2.3.4" },
+    ];
+    assert.deepEqual(
+      dnsConflictsForUpsert("A", existing).map((r) => r.id),
+      ["1"],
+    );
+    assert.deepEqual(
+      dnsConflictsForUpsert("AAAA", existing).map((r) => r.type),
+      ["CNAME"],
+    );
+  });
+
+  it("does not treat same-type DNS as conflict", () => {
+    assert.equal(
+      dnsConflictsForUpsert("A", [{ type: "A", id: "1" }]).length,
+      0,
+    );
   });
 });

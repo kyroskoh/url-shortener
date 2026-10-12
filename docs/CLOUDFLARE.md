@@ -56,7 +56,7 @@ Via Actions: **Deploy** workflow → `cloudflare: dry-run` or `apply` (`apply` r
 
 | Step | Action |
 |------|--------|
-| DNS | Upsert proxied `A`/`AAAA` for apex → origin; optional `www` (A and AAAA when IPv6 set) |
+| DNS | Upsert proxied `A`/`AAAA` for apex → origin; optional `www` (A and AAAA when IPv6 set). Conflicting `CNAME` at the same name is removed first |
 | SSL | Encryption mode **Full (strict)** (`ssl=strict`), Always Use HTTPS on, min TLS 1.2 |
 | Cache | Cache rule / ruleset: **bypass** caching for short-link style paths so redirects are not edge-cached |
 
@@ -80,7 +80,7 @@ The script **cannot** finish these; complete them manually:
 | Full (strict) but origin is HTTP-only | **SSL/TLS** → **Origin Server** → Create certificate → install on nginx HTTPS, **or** temporarily use Full (not strict) until origin has TLS |
 | Token/plan cannot edit Rulesets | **Caching** → **Cache Rules** → Create rule: Bypass cache for short-link redirects |
 | SSL mode not updated | **SSL/TLS** → **Overview** → Full (strict) |
-| DNS record conflict | **DNS** → **Records** → edit apex/`www` to proxied (orange cloud) → origin |
+| DNS record conflict (non-CNAME) | **DNS** → **Records** → edit apex/`www` to proxied (orange cloud) → origin IPs |
 | Stale cached responses | **Caching** → **Configuration** → **Purge Everything** after first deploy |
 | Authenticated Origin Pulls / Bot Fight | Plan-gated: enable under **SSL/TLS** → **Origin Server** or **Security** → **Bots** if required |
 

@@ -9,6 +9,7 @@
 import {
   CACHE_BYPASS_DESCRIPTION,
   CACHE_BYPASS_EXPRESSION,
+  dnsConflictsForUpsert,
   missingCredentials,
   plannedDnsRecords,
   plannedZoneSettings,
@@ -84,6 +85,21 @@ async function cf(path, { method = "GET", body } = {}) {
   return { ok: res.ok && json.success !== false, status: res.status, json };
 }
 
+async function listDnsByName(name) {
+  return cf(
+    `/zones/${zoneId}/dns_records?name=${encodeURIComponent(name)}`,
+  );
+}
+
+async function deleteDnsRecord(rec) {
+  const label = `${rec.type} ${rec.name || ""} → ${rec.content || rec.id}`;
+  if (DRY) {
+    console.log(`[dry-run] DNS DELETE ${label}`.trim());
+    return { ok: true, dry: true };
+  }
+  return cf(`/zones/${zoneId}/dns_records/${rec.id}`, { method: "DELETE" });
+}
+
 async function upsertDns(type, name, content) {
   const list = await cf(
     `/zones/${zoneId}/dns_records?type=${type}&name=${encodeURIComponent(name)}`,
@@ -99,6 +115,22 @@ async function upsertDns(type, name, content) {
     proxied: true,
     ttl: 1,
   };
+
+  const all = await listDnsByName(name);
+  if (!all.ok) {
+    return { ok: false, error: all.json };
+  }
+  const conflicts = dnsConflictsForUpsert(type, all.json.result ?? []);
+  for (const rec of conflicts) {
+    console.log(
+      `DNS replace: removing conflicting ${rec.type} ${name} before ${type}`,
+    );
+    const del = await deleteDnsRecord(rec);
+    if (!del.ok) {
+      return { ok: false, error: del.json ?? del.error };
+    }
+  }
+
   if (DRY) {
     console.log(
       `[dry-run] DNS ${existing ? "UPDATE" : "CREATE"} ${type} ${name} → ${content} (proxied)`,

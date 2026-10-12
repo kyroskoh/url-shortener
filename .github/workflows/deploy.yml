@@ -138,8 +138,31 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
+          chmod 700 ~/.ssh
+          # Write key; expand literal \n if the secret was pasted as one line
+          python3 - <<'PY'
+          import os, pathlib
+          raw = os.environ["DEPLOY_SSH_KEY"].replace("\r\n", "\n").replace("\r", "\n")
+          if "\\n" in raw and raw.count("\n") < 3:
+              raw = raw.replace("\\n", "\n")
+          if not raw.endswith("\n"):
+              raw += "\n"
+          path = pathlib.Path.home() / ".ssh" / "deploy_key"
+          path.write_text(raw)
+          path.chmod(0o600)
+          PY
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key -P "" >/dev/null 2>&1; then
+            echo "DEPLOY_SSH_KEY is invalid or passphrase-protected." >&2
+            echo "Use an unencrypted deploy key (ssh-keygen -N '') and re-run ops:bootstrap." >&2
+            exit 1
+          fi
+          {
+            echo "Host ${DEPLOY_HOST}"
+            echo "  IdentityFile ~/.ssh/deploy_key"
+            echo "  IdentitiesOnly yes"
+            echo "  PreferredAuthentications publickey"
+          } > ~/.ssh/config
+          chmod 600 ~/.ssh/config
           ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
       - name: Sync and compose up
         env:
@@ -154,7 +177,7 @@ jobs:
           TOKEN="${GHCR_PULL_TOKEN:-$GITHUB_TOKEN}"
           REMOTE="${DEPLOY_USER}@${DEPLOY_HOST}"
           REPO_URL="https://github.com/${{ github.repository }}.git"
-          ssh "$REMOTE" "set -e
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$REMOTE" "set -e
             DEPLOY_PATH='${DEPLOY_PATH}'
             mkdir -p \"\$(dirname \$DEPLOY_PATH)\"
             if [ ! -d \"\$DEPLOY_PATH/.git\" ] && [ ! -f \"\$DEPLOY_PATH/docker-compose.yml\" ]; then
@@ -167,11 +190,12 @@ jobs:
             fi
             mkdir -p \"\$DEPLOY_PATH/deploy/scripts\"
           "
-          scp .env.deploy "${REMOTE}:${DEPLOY_PATH}/.env"
-          scp docker-compose.yml docker-compose.prod.yml "${REMOTE}:${DEPLOY_PATH}/"
-          scp deploy/nginx.conf deploy/nginx.blink-layurl.com.conf "${REMOTE}:${DEPLOY_PATH}/deploy/"
-          scp deploy/scripts/ensure-docker.sh deploy/scripts/load-env.sh deploy/scripts/ensure-letsencrypt.sh deploy/scripts/install-host-nginx.sh "${REMOTE}:${DEPLOY_PATH}/deploy/scripts/"
-          ssh "$REMOTE" "set -e
+          SCP=(scp -i ~/.ssh/deploy_key -o IdentitiesOnly=yes)
+          "${SCP[@]}" .env.deploy "${REMOTE}:${DEPLOY_PATH}/.env"
+          "${SCP[@]}" docker-compose.yml docker-compose.prod.yml "${REMOTE}:${DEPLOY_PATH}/"
+          "${SCP[@]}" deploy/nginx.conf deploy/nginx.blink-layurl.com.conf "${REMOTE}:${DEPLOY_PATH}/deploy/"
+          "${SCP[@]}" deploy/scripts/ensure-docker.sh deploy/scripts/load-env.sh deploy/scripts/ensure-letsencrypt.sh deploy/scripts/install-host-nginx.sh "${REMOTE}:${DEPLOY_PATH}/deploy/scripts/"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$REMOTE" "set -e
             cd ${DEPLOY_PATH}
             chmod +x deploy/scripts/ensure-docker.sh deploy/scripts/load-env.sh deploy/scripts/ensure-letsencrypt.sh deploy/scripts/install-host-nginx.sh
             ./deploy/scripts/ensure-docker.sh

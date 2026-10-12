@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ops scripts load `.env.production` via `load-env.sh` so passwords containing `$` do not fail under `set -u`
 - `ops:cf-dry-run` bootstraps with `--cf-only` (no `DEPLOY_*` required); Cloudflare dry-run job uses Environment `production` secrets
 - Windows `ops:*` uses Git Bash + `gh.exe` via `scripts/ops-run.mjs` (avoids WSL↔gh.exe segfaults); resolve `DEPLOY_SSH_KEY_FILE` paths under WSL/Git Bash
+- Cloudflare provisioner replaces conflicting apex/`www` **CNAME** records before upserting `A`/`AAAA`
+- Deploy SSH: reject passphrase-protected keys early; use explicit `deploy_key` + `IdentitiesOnly`
 
 ## [0.6.2] — 2026-10-12
 

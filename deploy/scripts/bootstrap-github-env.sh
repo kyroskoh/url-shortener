@@ -68,6 +68,14 @@ resolve_deploy_ssh_key_file() {
 if [[ -n "${DEPLOY_SSH_KEY_FILE:-}" ]]; then
   _ssh_key_path="$(resolve_deploy_ssh_key_file "$DEPLOY_SSH_KEY_FILE" || true)"
   if [[ -n "${_ssh_key_path:-}" ]]; then
+    # GitHub Actions has no interactive agent — reject passphrase-protected keys early.
+    if ! ssh-keygen -y -f "$_ssh_key_path" -P "" >/dev/null 2>&1; then
+      echo "DEPLOY_SSH_KEY_FILE is passphrase-protected or unreadable: ${_ssh_key_path}" >&2
+      echo "  Actions cannot unlock encrypted keys. Create a dedicated deploy key:" >&2
+      echo "    ssh-keygen -t ed25519 -f ~/.ssh/layurl-deploy -N '' -C 'layurl-deploy'" >&2
+      echo "  Install the .pub on the VPS authorized_keys, then set DEPLOY_SSH_KEY_FILE to that private key." >&2
+      exit 1
+    fi
     DEPLOY_SSH_KEY="$(cat "$_ssh_key_path")"
     export DEPLOY_SSH_KEY
     echo "Loaded DEPLOY_SSH_KEY from ${_ssh_key_path}"
