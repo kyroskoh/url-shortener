@@ -1,0 +1,264 @@
+:root {
+  --bg-deep: #0c1612;
+  --bg-mid: #13241c;
+  --fg: #eef4f0;
+  --muted: #8fa89a;
+  --accent: #2f9e6a;
+  --accent-soft: rgba(47, 158, 106, 0.18);
+  --danger: #d4655a;
+  --line: rgba(238, 244, 240, 0.12);
+  --input: rgba(255, 255, 255, 0.04);
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  color-scheme: dark light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-deep: #e8f2ec;
+    --bg-mid: #f4faf6;
+    --fg: #13241c;
+    --muted: #4d6658;
+    --accent: #1f7a50;
+    --accent-soft: rgba(31, 122, 80, 0.12);
+    --danger: #b33b32;
+    --line: rgba(19, 36, 28, 0.12);
+    --input: rgba(19, 36, 28, 0.04);
+    --shadow: 0 20px 50px rgba(19, 36, 28, 0.08);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Source Sans 3", system-ui, sans-serif;
+  color: var(--fg);
+  background:
+    radial-gradient(ellipse 90% 55% at 10% -10%, #1e4a35 0%, transparent 55%),
+    radial-gradient(ellipse 70% 45% at 100% 100%, #243d30 0%, transparent 50%),
+    linear-gradient(160deg, var(--bg-mid), var(--bg-deep));
+  background-attachment: fixed;
+}
+
+h1,
+h2,
+.brand {
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+a {
+  color: var(--accent);
+}
+
+.shell {
+  width: min(960px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2.5rem 0 4rem;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  animation: rise 0.7s ease both;
+}
+
+.brand {
+  font-size: clamp(3rem, 8vw, 4.5rem);
+  margin: 0;
+  line-height: 0.95;
+}
+
+.tagline {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.host {
+  display: inline-block;
+  margin-top: 0.85rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+}
+
+.panel {
+  background: color-mix(in srgb, var(--bg-mid) 80%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  animation: rise 0.8s ease 0.08s both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--input);
+  color: var(--fg);
+  border-radius: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  font: inherit;
+}
+
+input:focus,
+textarea:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+button,
+.btn {
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  padding: 0.7rem 1.2rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+button:hover,
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--line);
+}
+
+button.danger {
+  background: var(--danger);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.msg {
+  margin: 0.75rem 0 0;
+  font-size: 0.95rem;
+}
+
+.msg.error {
+  color: var(--danger);
+}
+
+.msg.ok {
+  color: var(--accent);
+}
+
+.success-box {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 0.9rem;
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.success-box code {
+  font-size: 1rem;
+  word-break: break-all;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+  margin: 2rem 0 0.75rem;
+}
+
+.list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.item {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--input);
+}
+
+.item strong {
+  font-size: 1.05rem;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+  word-break: break-all;
+}
+
+.auth-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.footer {
+  margin-top: 3rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.qr {
+  width: 128px;
+  height: 128px;
+  border-radius: 0.5rem;
+  background: #fff;
+}

@@ -1,0 +1,21 @@
+{
+  "name": "url-shortener",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Blink — URL shortener for layurl.com",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @blink/api & npm run dev -w @blink/web",
+    "build": "npm run build -w @blink/shared && npm run build -w @blink/api && npm run build -w @blink/web",
+    "lint": "npm run lint -w @blink/api --if-present && npm run lint -w @blink/web --if-present",
+    "typecheck": "npm run typecheck -w @blink/shared && npm run typecheck -w @blink/api && npm run typecheck -w @blink/web",
+    "test": "npm run test -w @blink/api",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
