@@ -163,13 +163,17 @@ jobs:
                 git clone --depth 1 '${REPO_URL}' \"\$DEPLOY_PATH\" || mkdir -p \"\$DEPLOY_PATH/deploy\"
               fi
             fi
-            mkdir -p \"\$DEPLOY_PATH/deploy\"
+            mkdir -p \"\$DEPLOY_PATH/deploy/scripts\"
           "
           scp .env.deploy "${REMOTE}:${DEPLOY_PATH}/.env"
           scp docker-compose.yml docker-compose.prod.yml "${REMOTE}:${DEPLOY_PATH}/"
-          scp deploy/nginx.conf "${REMOTE}:${DEPLOY_PATH}/deploy/"
+          scp deploy/nginx.conf deploy/nginx.host.conf "${REMOTE}:${DEPLOY_PATH}/deploy/"
+          scp deploy/scripts/ensure-docker.sh deploy/scripts/install-host-nginx.sh "${REMOTE}:${DEPLOY_PATH}/deploy/scripts/"
           ssh "$REMOTE" "set -e
             cd ${DEPLOY_PATH}
+            chmod +x deploy/scripts/ensure-docker.sh deploy/scripts/install-host-nginx.sh
+            ./deploy/scripts/ensure-docker.sh
+            ./deploy/scripts/install-host-nginx.sh \"\$(pwd)/deploy/nginx.host.conf\"
             echo '${TOKEN}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
             export BLINK_IMAGE_TAG='${IMAGE_TAG}'
             export GHCR_OWNER='${OWNER}'
@@ -178,6 +182,7 @@ jobs:
             set +a
             docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+            # Compose nginx is profiled off; host nginx fronts 127.0.0.1:3000 / :8080
           "
       - name: Post-deploy health check
         env:

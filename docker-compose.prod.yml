@@ -1,5 +1,6 @@
-# Production overlay: pull GHCR images; secrets via .env from GitHub Actions render-env.
-# Usage on origin:
+# Production overlay: GHCR images + host nginx (Compose nginx disabled).
+# API/web bind localhost only; install deploy/nginx.host.conf on the host.
+#
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
@@ -20,8 +21,16 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgres://blink:${POSTGRES_PASSWORD}@postgres:5432/blink}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       PORT: "3000"
+    ports:
+      - "127.0.0.1:3000:3000"
 
   web:
     build: !reset null
     image: ghcr.io/${GHCR_OWNER:-kyroskoh}/blink-web:${BLINK_IMAGE_TAG:-latest}
     pull_policy: always
+    ports:
+      - "127.0.0.1:8080:80"
+
+  # Host already runs nginx — do not start Compose edge (profile never selected).
+  nginx:
+    profiles: ["compose-nginx"]

@@ -24,7 +24,21 @@ CLOUDFLARE_ORIGIN_IPV6=
 CLOUDFLARE_MANAGE_WWW=true
 ```
 
-## Provisioner
+## Production ship (recommended)
+
+Prefer the ops path (secrets + Cloudflare + deploy in one flow):
+
+```bash
+cp .env.production.example .env.production
+# fill secrets; prefer DEPLOY_SSH_KEY_FILE=/path/to/key
+
+gh auth login   # once, if needed
+npm run ops:ship   # or: npm run ops:cf-dry-run first
+```
+
+See [GITHUB_SECRETS.md](GITHUB_SECRETS.md).
+
+## Provisioner (local / advanced)
 
 ```bash
 npm run cloudflare:dry-run
@@ -79,3 +93,5 @@ Client → Cloudflare (proxied DNS + edge TLS)
 ```
 
 Set `BLINK_BASE_URL=https://layurl.com`. Secrets and deploy: [GITHUB_SECRETS.md](GITHUB_SECRETS.md).
+
+Production edge on the origin is **host nginx** ([`deploy/nginx.host.conf`](../deploy/nginx.host.conf)) → localhost API/web containers. Compose’s nginx service is not used in prod.

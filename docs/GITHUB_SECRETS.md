@@ -2,29 +2,35 @@
 
 **Source of truth for production credentials is GitHub** (Environment `production`). Local [`.env.production`](../.env.production.example) is the only file you edit; scripts sync it with `gh` — no dashboard clicking.
 
-## One-command ship
+## Ship steps
 
-Prerequisites (once, outside this repo):
-
-- Cloudflare zone for `layurl.com` with NS at Cloudflare
-- Origin host with SSH, Docker, and Compose
-- `gh auth login` on your machine
+Prerequisites (once, outside this repo): Cloudflare zone for `layurl.com` with NS at Cloudflare; origin host with SSH and **host nginx** already installed. Docker is installed automatically on first ship via get.docker.com if missing.
 
 ```bash
 cp .env.production.example .env.production
-# fill values (use DEPLOY_SSH_KEY_FILE for the PEM path)
+# fill secrets; prefer DEPLOY_SSH_KEY_FILE=/path/to/key
 
-npm run ops:bootstrap    # create Environment + set secrets/vars
-npm run ops:cf-dry-run   # optional: Cloudflare dry-run via Actions
-npm run ops:ship         # Cloudflare apply + Compose deploy + health check
+gh auth login   # once, if needed
+npm run ops:ship   # or: npm run ops:cf-dry-run first
+```
+
+`ops:ship` bootstraps the GitHub Environment `production` (secrets/vars), runs Cloudflare apply, deploys Compose from GHCR, and health-checks `/api/ready`.
+
+Optional splits:
+
+```bash
+npm run ops:bootstrap    # sync secrets/vars only
+npm run ops:cf-dry-run   # bootstrap + Cloudflare dry-run (no deploy)
 ```
 
 Windows:
 
 ```powershell
-.\scripts\ops.ps1 bootstrap
-.\scripts\ops.ps1 cf-dry-run
-.\scripts\ops.ps1 ship
+cp .env.production.example .env.production
+# fill secrets; prefer DEPLOY_SSH_KEY_FILE=/path/to/key
+
+gh auth login   # once, if needed
+.\scripts\ops.ps1 ship   # or: .\scripts\ops.ps1 cf-dry-run first
 ```
 
 Scripts never print secret values. They call [`bootstrap-github-env.sh`](../deploy/scripts/bootstrap-github-env.sh) and [`ship-prod.sh`](../deploy/scripts/ship-prod.sh).

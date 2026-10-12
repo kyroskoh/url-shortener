@@ -116,12 +116,18 @@ Optional env: `BACKUP_DIR` overrides the output directory (default `./backups`).
 
 ## Reverse proxy
 
-Compose includes **nginx** (`deploy/nginx.conf`):
+**Local Compose** includes container nginx ([`deploy/nginx.conf`](../deploy/nginx.conf)) on port 80.
+
+**Production** (existing host nginx): Compose nginx is disabled. API/web bind `127.0.0.1:3000` / `127.0.0.1:8080`. Install [`deploy/nginx.host.conf`](../deploy/nginx.host.conf) via `deploy/scripts/install-host-nginx.sh` (also run by `ops:ship`).
+
+Routing (both configs):
 
 - `/` → `api` `site-home` (custom landing file or `302` to `/admin/`)
-- `/admin/` → `web:80` (Vite SPA; path prefix stripped)
-- `/api/` → `api:3000`
-- `/{slug}` short paths → `api` redirect handler (`/r/:slug`)
+- `/admin/` → web (Vite SPA; path prefix stripped)
+- `/api/` → api
+- `/{slug}` short paths → api redirect handler (`/r/:slug`)
+
+If Docker is missing on the origin, deploy runs [`deploy/scripts/ensure-docker.sh`](../deploy/scripts/ensure-docker.sh) (`curl https://get.docker.com | sh`).
 
 ### Custom landing page
 
@@ -136,15 +142,18 @@ Trusts `CF-Connecting-IP` / `X-Forwarded-For` when behind Cloudflare.
 ## Production ship (automated)
 
 ```bash
-cp .env.production.example .env.production   # fill once
-npm run ops:ship                             # sync secrets → CF apply → Compose + health check
+cp .env.production.example .env.production
+# fill secrets; prefer DEPLOY_SSH_KEY_FILE=/path/to/key
+
+gh auth login   # once, if needed
+npm run ops:ship   # or: npm run ops:cf-dry-run first
 ```
 
-Details: [GITHUB_SECRETS.md](GITHUB_SECRETS.md). Irreducible once: Cloudflare zone/NS, SSH host with Docker, `gh auth login`.
+Details: [GITHUB_SECRETS.md](GITHUB_SECRETS.md). Irreducible once: Cloudflare zone/NS, SSH host (Docker is auto-installed via get.docker.com; host nginx must already exist for prod).
 
 ## Production checklist
 
-1. Fill `.env.production` and run `npm run ops:ship` (see above)
+1. Follow [Production ship](#production-ship-automated) above
 2. Publish images via `v*` tag CI → GHCR before shipping a new tag
 3. [CLOUDFLARE.md](CLOUDFLARE.md) — provisioner runs inside `ops:ship` (DNS, Full strict, cache bypass)
 4. Enable Turnstile if public mode is on; set keys + `BLINK_TURNSTILE_FORCE=true` in `.env.production`

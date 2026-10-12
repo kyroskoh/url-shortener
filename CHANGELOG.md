@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Prod origin: `ensure-docker.sh` (get.docker.com), host nginx site [`deploy/nginx.host.conf`](deploy/nginx.host.conf) + `install-host-nginx.sh`; Compose nginx disabled in `docker-compose.prod.yml` (API/web on `127.0.0.1:3000` / `:8080`)
+
 ## [0.6.1] — 2026-10-12
 
 ### Added
