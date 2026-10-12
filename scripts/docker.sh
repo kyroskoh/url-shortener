@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Blink Docker helpers (Linux / macOS / Git Bash).
-# Usage: ./scripts/docker.sh <start|stop|rebuild|restart|logs|status|down>
+# Usage: ./scripts/docker.sh <start|stop|rebuild|restart|logs|status|down|backup|restore>
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -43,12 +43,16 @@ Commands:
   logs       Follow service logs (optional service name)
   status     Show compose ps
   down       Stop and remove containers (keep volumes)
+  backup     Postgres dump to ./backups/ (timestamped)
+  restore    Restore dump (needs CONFIRM_RESTORE=1 and dump path)
   help       Show this help
 
 Examples:
   ./scripts/docker.sh start
   ./scripts/docker.sh logs api
   ./scripts/docker.sh rebuild
+  ./scripts/docker.sh backup
+  CONFIRM_RESTORE=1 ./scripts/docker.sh restore backups/blink-YYYYMMDD-HHMMSS.dump
 EOF
 }
 
@@ -84,6 +88,12 @@ case "$cmd" in
     ;;
   status|ps)
     "${COMPOSE[@]}" ps "$@"
+    ;;
+  backup)
+    exec "$ROOT/deploy/scripts/backup-postgres.sh" "$@"
+    ;;
+  restore)
+    exec "$ROOT/deploy/scripts/restore-postgres.sh" "$@"
     ;;
   help|-h|--help)
     usage

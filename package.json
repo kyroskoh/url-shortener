@@ -1,7 +1,7 @@
 {
   "name": "url-shortener",
   "private": true,
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Blink — URL shortener for layurl.com",
   "workspaces": [
     "apps/*",
@@ -13,7 +13,11 @@
     "lint": "npm run lint -w @blink/api --if-present && npm run lint -w @blink/web --if-present",
     "typecheck": "npm run typecheck -w @blink/shared && npm run typecheck -w @blink/client && npm run typecheck -w @blink/cli && npm run typecheck -w @blink/api && npm run typecheck -w @blink/web",
     "test": "npm run test -w @blink/api",
+    "test:e2e": "playwright test",
     "smoke": "node scripts/smoke.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
   },
   "engines": {
     "node": ">=22"

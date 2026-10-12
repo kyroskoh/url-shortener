@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-10-12
+
+### Added
+
+- Phase 4 ops and scale: Postgres backup/restore scripts (`deploy/scripts/backup-postgres.sh`, `restore-postgres.sh`) with restore drill in [docs/INSTALLATION.md](docs/INSTALLATION.md)
+- Docker helper commands `backup` / `restore` in `scripts/docker.sh` and `scripts/docker.ps1`
+- GitHub Actions CI: typecheck, unit tests, Compose + Playwright E2E; GHCR publish of `blink-api` / `blink-web` on `v*` tags
+- Playwright E2E suite (`e2e/`): login, create, redirect, quarantine, expiry
+
+### Changed
+
+- Multi-admin / OIDC deferred to [ENHANCEMENT.md](ENHANCEMENT.md); single-admin (env password + API key) retained (PRD P4-R3 amendment)
+- Image publish target is GHCR only (Docker Hub deferred)
+
 ## [0.4.2] — 2026-10-12
 
 ### Added
@@ -98,6 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed locked `drizzle-kit` (use `npx drizzle-kit@0.31.11 generate` when needed) to drop nested vulnerable `esbuild` / `@esbuild-kit` chain
 - `npm audit`: 0 vulnerabilities
 
+[0.5.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0
 [0.4.2]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2
 [0.4.1]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1
 [0.4.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0

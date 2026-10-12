@@ -22,10 +22,15 @@ npm run dev -w @blink/web
 ```bash
 npm run lint
 npm run typecheck
-npm run test -w @blink/api
+npm run test
 npm run smoke
+# E2E (Compose must be up on http://localhost)
+npx playwright install chromium   # once
+npm run test:e2e
 npm audit
 ```
+
+CI (`.github/workflows/ci.yml`) runs typecheck, unit tests, and Playwright against Compose; version tags `v*` publish `blink-api` / `blink-web` to GHCR.
 
 ## Schema migrations
 

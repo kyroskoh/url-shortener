@@ -1,4 +1,4 @@
-/** Types aligned with packages/client/openapi.json (Blink API 0.4.2). */
+/** Types aligned with packages/client/openapi.json (Blink API 0.5.0). */
 
 export type Link = {
   slug: string;

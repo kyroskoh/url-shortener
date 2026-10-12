@@ -10,6 +10,9 @@ coverage/
 *.tsbuildinfo
 .idea/
 .vscode/
+backups/
 scripts/.browser-verify/
+playwright-report/
+test-results/
 apps/api/drizzle/meta/
 !apps/api/drizzle/meta/_journal.json

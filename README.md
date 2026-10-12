@@ -4,7 +4,7 @@
 
 Blink is a self-hosted URL shortener for **[layurl.com](https://layurl.com)** — Node.js, Postgres, Redis, nginx, and Cloudflare. Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url), with a fresh UI and Redis-backed redirects.
 
-> GitHub repository name: `url-shortener`. Product name: **Blink**. Current release: **[v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2)**.
+> GitHub repository name: `url-shortener`. Product name: **Blink**. Current release: **[v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0)**.
 
 ## Quick start
 
@@ -20,6 +20,7 @@ cp .env.example .env
 ./scripts/docker.sh stop       # stop containers
 ./scripts/docker.sh rebuild    # rebuild + recreate
 ./scripts/docker.sh logs       # follow logs
+./scripts/docker.sh backup     # Postgres dump → ./backups/
 ```
 
 **Windows (PowerShell or cmd)**
@@ -29,6 +30,7 @@ cp .env.example .env
 .\scripts\docker.ps1 stop
 .\scripts\docker.ps1 rebuild
 .\scripts\docker.ps1 logs
+.\scripts\docker.ps1 backup    # needs Git Bash for .sh scripts
 # or: scripts\docker.cmd start
 ```
 
@@ -48,9 +50,32 @@ Default local admin password/API key come from `.env` (change before any public 
 - **Phase 1:** quarantine / re-enable · optional URL blocklist/HTTP check · Turnstile force-on · [abuse playbook](docs/ABUSE.md)
 - **Phase 2:** UTM builder · destination preview · bulk CSV import · tags/folders · per-link password · one-time links · custom landing page (`BLINK_LANDING_PAGE`)
 - **Phase 3:** hourly hit charts · max redirects · HMAC webhooks · idempotent create · cursor pagination · Prometheus `/api/metrics` · `@blink/client` + `blink` CLI
+- **Phase 4:** Postgres backup/restore · GitHub Actions CI + GHCR images · Playwright E2E
 - QR codes (show/hide + PNG download) · CSV export · Docker Compose · Cloudflare DNS/SSL/cache provisioner
 
-Phase 4 (backups, CI images, E2E) is specified in [PRD.md](PRD.md). Ideas beyond the roadmap: [ENHANCEMENT.md](ENHANCEMENT.md).
+Ideas beyond the roadmap: [ENHANCEMENT.md](ENHANCEMENT.md).
+
+## CI and images
+
+On push/PR to `main`: typecheck, unit tests, and Playwright E2E against Compose. On `v*` tags: publish `ghcr.io/<owner>/blink-api` and `blink-web` (version tag + `latest`). Local Compose still builds from Dockerfiles; pull GHCR images if you prefer prebuilt artifacts.
+
+## Backups
+
+```bash
+./deploy/scripts/backup-postgres.sh
+CONFIRM_RESTORE=1 ./deploy/scripts/restore-postgres.sh backups/blink-YYYYMMDD-HHMMSS.dump
+```
+
+Redis is not included (rebuildable). Restore drill: [docs/INSTALLATION.md](docs/INSTALLATION.md#postgres-backups).
+
+## E2E
+
+With the stack running (`./scripts/docker.sh start`):
+
+```bash
+npx playwright install chromium   # once
+npm run test:e2e
+```
 
 ## CLI
 

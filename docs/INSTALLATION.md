@@ -19,7 +19,7 @@ Helper scripts (create `.env` from `.env.example` on first `start` if missing):
 | Linux / macOS | `./scripts/docker.sh start` | `./scripts/docker.sh stop` | `./scripts/docker.sh rebuild` |
 | Windows | `.\scripts\docker.ps1 start` | `.\scripts\docker.ps1 stop` | `.\scripts\docker.ps1 rebuild` |
 
-Also: `logs`, `status`, `restart`, `down`. Or raw Compose: `docker compose up --build`.
+Also: `logs`, `status`, `restart`, `down`, `backup`, `restore`. Or raw Compose: `docker compose up --build`.
 
 | URL | Service |
 |-----|---------|
@@ -33,6 +33,15 @@ Also: `logs`, `status`, `restart`, `down`. Or raw Compose: `docker compose up --
 | http://localhost/{slug} | Redirect (nginx → api) |
 
 Data volumes: `blink_pg_data`, `blink_redis_data`.
+
+### Prebuilt images (GHCR)
+
+CI publishes on `v*` tags:
+
+- `ghcr.io/<github-owner>/blink-api:<tag>`
+- `ghcr.io/<github-owner>/blink-web:<tag>`
+
+Compose in this repo builds from source by default. To use prebuilt images, set `image:` on the `api` / `web` services (and remove or keep `build:` as you prefer) after authenticating to GHCR if the packages are private.
 
 ## Environment
 
@@ -70,7 +79,39 @@ Cloudflare provisioner vars: see [CLOUDFLARE.md](CLOUDFLARE.md).
 
 ## Migrations
 
-The API runs Drizzle migrations on startup. To roll back a bad deploy: restore a Postgres volume snapshot or dump taken before the migration (see Phase 4 backup scripts in the PRD). Do not delete migration files that have been applied in production.
+The API runs Drizzle migrations on startup. To roll back a bad deploy: restore a Postgres dump taken before the migration (see [Backups](#postgres-backups)). Do not delete migration files that have been applied in production.
+
+## Postgres backups
+
+Scripts write **custom-format** `pg_dump` files under `./backups/` (gitignored). Redis is **not** backed up — redirect cache, rate limits, and sessions are rebuildable.
+
+```bash
+# From repo root (stack must be running)
+./deploy/scripts/backup-postgres.sh
+# or: ./scripts/docker.sh backup
+
+# Restore (destructive — requires confirm)
+CONFIRM_RESTORE=1 ./deploy/scripts/restore-postgres.sh backups/blink-YYYYMMDD-HHMMSS.dump
+# then: ./scripts/docker.sh restart api
+```
+
+On Windows, use Git Bash or WSL for the `.sh` scripts, or `.\scripts\docker.ps1 backup` / `restore` (invokes bash and passes `CONFIRM_RESTORE` into WSL when needed):
+
+```powershell
+.\scripts\docker.ps1 backup
+$env:CONFIRM_RESTORE = "1"
+.\scripts\docker.ps1 restore backups/blink-YYYYMMDD-HHMMSS.dump
+```
+
+### Restore drill
+
+1. Create a known short link in the admin UI (note the slug).
+2. Run `./deploy/scripts/backup-postgres.sh` and keep the printed path.
+3. Delete the link (or quarantine it) in the UI / API.
+4. `CONFIRM_RESTORE=1 ./deploy/scripts/restore-postgres.sh <dump>` then restart API.
+5. Confirm the slug redirects again and appears in the admin list.
+
+Optional env: `BACKUP_DIR` overrides the output directory (default `./backups`).
 
 ## Reverse proxy
 
@@ -99,7 +140,7 @@ Trusts `CF-Connecting-IP` / `X-Forwarded-For` when behind Cloudflare.
 4. [CLOUDFLARE.md](CLOUDFLARE.md) — provision DNS, Full (strict), cache bypass
 5. Enable Turnstile if public mode is on; use `BLINK_TURNSTILE_FORCE=true` for public instances
 6. Consider URL blocklist (`deploy/blocklist.example.txt`) — see [ABUSE.md](ABUSE.md)
-7. Regular Postgres backups (Phase 4 scripts when implemented; until then `pg_dump`)
+7. Regular Postgres backups — see [Postgres backups](#postgres-backups) (`./deploy/scripts/backup-postgres.sh`)
 
 ## Resource expectations
 

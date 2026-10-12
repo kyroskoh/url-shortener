@@ -12,8 +12,8 @@ Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url), rebuilt on N
 | **Host** | layurl.com |
 | **Repo** | url-shortener |
 | **Owner** | Operator / maintainer of this repository |
-| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phase 2 ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0), patch [v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)); Phase 3 ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0), patches [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1), [v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2)); Phase 4 remains implementable from this PRD |
-| **Current phase** | Phase 3 complete ([v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2)); next is **Phase 4 — Ops and scale** |
+| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phase 2 ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0), patch [v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)); Phase 3 ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0), patches [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1), [v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2)); Phase 4 ([v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0)) |
+| **Current phase** | Phase 4 complete ([v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0)); roadmap Phases 0–4 shipped — see [ENHANCEMENT.md](ENHANCEMENT.md) for next ideas |
 
 ## Problem
 
@@ -27,7 +27,7 @@ Most URL shorteners are bloated, hard to self-host, or lack essentials (custom s
 - Phase 1 trust/abuse features — **done**
 - Phase 2 product depth — **done**
 - Phase 3 analytics and integrations — **done** ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0), patches [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1), [v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2))
-- Full specification for Phase 4 (this document; Phase 4 is next to implement)
+- Phase 4 ops and scale — **done** ([v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0))
 
 ### Non-goals (all phases)
 
@@ -114,7 +114,7 @@ None (greenfield).
 
 ## Implementing Phase 1–4 product features
 
-Phases **0–3** are complete. Phase **4** is the active implementation target and remains fully specified below.
+Phases **0–4** are complete. Multi-admin remains deferred (P4-R3 amendment → [ENHANCEMENT.md](ENHANCEMENT.md)).
 
 ---
 
@@ -278,7 +278,7 @@ Phase 0 redirects/hits; Phase 2 pagination helpful for large lists.
 
 ### Goal
 
-Production operability: backups, optional multi-admin, published images, E2E.
+Production operability: backups, published images (GHCR), E2E. Single-admin retained.
 
 ### Dependencies
 
@@ -287,9 +287,9 @@ Phases 0–3 for full E2E surface; Phase 0 sufficient for backups/CI of MVP.
 ### In-scope features
 
 1. Postgres backup / restore scripts (versioned dumps)
-2. Multi-admin roles / SSO **only if still needed** — default remains single-admin; justify before building
-3. CI + Docker Hub / GHCR publish
-4. Full E2E browser suite
+2. ~~Multi-admin roles / SSO~~ — **skipped** (see P4-R3 amendment); tracked in [ENHANCEMENT.md](ENHANCEMENT.md)
+3. CI + GHCR image publish on version tag
+4. Full E2E browser suite (Playwright)
 
 ### Functional requirements
 
@@ -297,25 +297,30 @@ Phases 0–3 for full E2E surface; Phase 0 sufficient for backups/CI of MVP.
 |----|-------------|
 | P4-R1 | `deploy/scripts/backup-postgres.sh` and `restore-postgres.sh` with timestamped dumps |
 | P4-R2 | Document restore drill; backup does not include Redis (rebuildable) |
-| P4-R3 | If multi-admin approved: invite + role `admin`\|`viewer`; SSO via OIDC optional |
-| P4-R4 | GitHub Actions: test, build, push images on tag |
-| P4-R5 | Playwright (or equivalent) E2E: login, create, redirect, quarantine, expiry |
+| P4-R3 | **Amendment:** multi-admin / OIDC not built in Phase 4. Env-hashed single admin remains. Invite + `admin`\|`viewer` + optional OIDC deferred to [ENHANCEMENT.md](ENHANCEMENT.md). |
+| P4-R4 | GitHub Actions: test, E2E, build/push images to GHCR on `v*` tag |
+| P4-R5 | Playwright E2E: login, create, redirect, quarantine, expiry |
 
 ### Acceptance criteria
 
-- [ ] Backup + restore round-trip preserves links
-- [ ] CI green on main; images published on version tag
-- [ ] E2E suite passes against compose
-- [ ] If multi-admin skipped, PRD amendment records single-admin decision
+- [x] Backup + restore round-trip preserves links
+- [x] CI green on main; images published on version tag (GHCR)
+- [x] E2E suite passes against compose
+- [x] Multi-admin skipped — single-admin decision recorded (P4-R3 amendment + ENHANCEMENT.md)
 
 ### Non-goals (Phase 4)
 
 - Kubernetes operator
 - Multi-region active-active
+- Multi-admin / OIDC (deferred)
+- Docker Hub publish (GHCR only)
 
 ### Verification
 
-- Restore drill in staging; CI logs; E2E report artifact
+- Restore drill: create → backup → delete → restore → 302 — **passed** (local)
+- Unit + typecheck — **passed**; Playwright E2E against Compose — **passed**
+- CI / GHCR: workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml); images publish on `v*` tags
+- Release: [v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0)
 
 ---
 
@@ -349,7 +354,7 @@ Phases 0–3 for full E2E surface; Phase 0 sufficient for backups/CI of MVP.
 
 ## Assumptions
 
-- Single admin is enough until Phase 4 decides otherwise
+- Single admin (env password + API key) is sufficient; multi-admin / OIDC deferred to [ENHANCEMENT.md](ENHANCEMENT.md)
 - Production domain is layurl.com; local uses `http://localhost`
 - Operator owns Cloudflare zone and can create API tokens
 

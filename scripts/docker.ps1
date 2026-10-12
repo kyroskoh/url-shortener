@@ -1,9 +1,9 @@
 # Blink Docker helpers (Windows PowerShell).
-# Usage: .\scripts\docker.ps1 start|stop|rebuild|restart|logs|status|down
+# Usage: .\scripts\docker.ps1 start|stop|rebuild|restart|logs|status|down|backup|restore
 [CmdletBinding()]
 param(
   [Parameter(Position = 0)]
-  [ValidateSet("start", "stop", "rebuild", "restart", "logs", "status", "ps", "down", "help")]
+  [ValidateSet("start", "stop", "rebuild", "restart", "logs", "status", "ps", "down", "backup", "restore", "help")]
   [string]$Command = "help",
 
   [Parameter(ValueFromRemainingArguments = $true)]
@@ -61,13 +61,41 @@ Commands:
   logs       Follow service logs (optional service name)
   status     Show compose ps
   down       Stop and remove containers (keep volumes)
+  backup     Postgres dump to ./backups/ (needs bash / Git Bash)
+  restore    Restore dump (CONFIRM_RESTORE=1 + dump path; needs bash)
   help       Show this help
 
 Examples:
   .\scripts\docker.ps1 start
   .\scripts\docker.ps1 logs api
   .\scripts\docker.ps1 rebuild
+  .\scripts\docker.ps1 backup
+  `$env:CONFIRM_RESTORE=1; .\scripts\docker.ps1 restore backups\blink-YYYYMMDD-HHMMSS.dump
 "@
+}
+
+function Invoke-BashScript {
+  param(
+    [Parameter(Mandatory = $true)][string]$ScriptPath,
+    [string[]]$ScriptArgs = @(),
+    [hashtable]$EnvVars = @{}
+  )
+  $bash = Get-Command bash -ErrorAction SilentlyContinue
+  if (-not $bash) {
+    Write-Error "bash is required for backup/restore on Windows (Git Bash or WSL) or run deploy/scripts/*.sh directly."
+  }
+  # WSL bash does not inherit PowerShell env; prefix assignments in the bash command line.
+  $exports = @()
+  foreach ($key in $EnvVars.Keys) {
+    $exports += "$key='$($EnvVars[$key])'"
+  }
+  $argList = ($ScriptArgs | ForEach-Object { "'$_'" }) -join " "
+  $prefix = if ($exports.Count) { ($exports -join " ") + " " } else { "" }
+  $cmd = "${prefix}'$ScriptPath' $argList".Trim()
+  & bash -lc $cmd
+  if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+  }
 }
 
 $extra = @()
@@ -102,6 +130,16 @@ switch ($Command) {
   }
   { $_ -in @("status", "ps") } {
     Invoke-Compose (@("compose", "ps") + $extra)
+  }
+  "backup" {
+    # Relative paths work with WSL/Git Bash when cwd is repo root
+    Invoke-BashScript -ScriptPath "./deploy/scripts/backup-postgres.sh" -ScriptArgs $extra
+  }
+  "restore" {
+    if ($env:CONFIRM_RESTORE -ne "1") {
+      Write-Error "Refuse to restore without CONFIRM_RESTORE=1 (e.g. `$env:CONFIRM_RESTORE='1'; .\scripts\docker.ps1 restore backups/blink-....dump)"
+    }
+    Invoke-BashScript -ScriptPath "./deploy/scripts/restore-postgres.sh" -ScriptArgs $extra -EnvVars @{ CONFIRM_RESTORE = "1" }
   }
   "help" {
     Show-Help

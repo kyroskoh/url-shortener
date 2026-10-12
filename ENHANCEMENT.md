@@ -1,6 +1,6 @@
 # Enhancements backlog
 
-Ideas beyond the shipped roadmap. Phase 0–3 (through **v0.4.2**) are implemented in-repo; Phase 4 remains in [PRD.md](PRD.md).
+Ideas beyond the shipped roadmap. Phases 0–4 (through **[v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0)**) are complete; see [PRD.md](PRD.md) / [CHANGELOG.md](CHANGELOG.md).
 
 ## Shipped in Phase 3 (not open)
 
@@ -16,6 +16,7 @@ Ideas beyond the shipped roadmap. Phase 0–3 (through **v0.4.2**) are implement
 
 | Status | Idea |
 |--------|------|
+| Candidate | Multi-admin: invite + role `admin`\|`viewer`; optional OIDC SSO (deferred from Phase 4 — single-admin retained) |
 | Candidate | Webhook events beyond `hit`: `link.created`, `link.deleted`, `link.quarantined`, `link.limit_reached` / expired |
 | Candidate | Instance stats API `GET /api/stats` (totals, hits today/7d, top slugs) + admin summary strip |
 | Candidate | Webhook delivery status (last HTTP status / time / error) for operators |
@@ -23,15 +24,7 @@ Ideas beyond the shipped roadmap. Phase 0–3 (through **v0.4.2**) are implement
 | Candidate | `active_at` / delayed activation in Advanced options |
 | Candidate | Soft pause (disable redirects without abuse “quarantine” label) |
 | Candidate | Duplicate-destination policy: optional block (not only warn) |
-
-## Phase 4 (see PRD)
-
-| Status | Idea |
-|--------|------|
-| Planned | Postgres backup / restore scripts + restore drill docs |
-| Planned | CI + GHCR / Docker Hub publish on version tag |
-| Planned | Playwright (or equivalent) E2E suite |
-| Decide | Multi-admin / OIDC — only if still needed (default single-admin) |
+| Candidate | Docker Hub mirror of GHCR images |
 
 ## Deferred / won’t do (for now)
 
