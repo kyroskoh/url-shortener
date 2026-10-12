@@ -34,7 +34,9 @@ test.describe("Blink admin E2E", () => {
     const article = page.locator("article").filter({ hasText: createSlug });
     await expect(article).toBeVisible();
     await article.getByRole("button", { name: "Quarantine" }).click();
-    await expect(article.getByText("status:")).toContainText("quarantined");
+    await expect(article.locator(".status-quarantined")).toContainText(
+      "quarantined",
+    );
 
     const quarantined = await request.get(`/${createSlug}`, { maxRedirects: 0 });
     expect(quarantined.status()).toBe(410);
