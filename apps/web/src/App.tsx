@@ -469,13 +469,13 @@ export function App() {
                     autoComplete="new-password"
                   />
                 </label>
-                <label className="row" style={{ alignItems: "center", gap: "0.5rem" }}>
+                <label className="check-label">
                   <input
                     type="checkbox"
                     checked={oneTime}
                     onChange={(e) => setOneTime(e.target.checked)}
                   />
-                  One-time (burn after first redirect)
+                  <span>One-time (burn after first redirect)</span>
                 </label>
                 {authed && (
                   <>
@@ -740,15 +740,15 @@ export function App() {
                         ))}
                       </select>
                     </label>
-                    <label className="row" style={{ alignItems: "center", gap: "0.5rem" }}>
+                    <label className="check-label">
                       <input
                         type="checkbox"
-                        checked={editing.oneTime}
+                        checked={Boolean(editing.oneTime)}
                         onChange={(e) =>
                           setEditing({ ...editing, oneTime: e.target.checked })
                         }
                       />
-                      One-time
+                      <span>One-time (burn after first redirect)</span>
                     </label>
                     <div className="row">
                       <button type="submit" disabled={busy}>

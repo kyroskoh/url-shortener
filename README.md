@@ -4,7 +4,7 @@
 
 Blink is a self-hosted URL shortener for **[layurl.com](https://layurl.com)** — Node.js, Postgres, Redis, nginx, and Cloudflare. Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url), with a fresh UI and Redis-backed redirects.
 
-> GitHub repository name: `url-shortener`. Product name: **Blink**. Current release: **[v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0)**.
+> GitHub repository name: `url-shortener`. Product name: **Blink**. Current release: **[v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)**.
 
 ## Quick start
 

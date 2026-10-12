@@ -54,7 +54,7 @@ Public create (when `BLINK_PUBLIC_MODE=true`) may omit auth; may require Turnsti
 | POST | `/api/links/import` | Admin | CSV body (`text/plain` or `{ csv }`); `?dryRun=true` validates without writing |
 | POST | `/api/links` | Admin or public | Create (see body below) |
 | GET | `/api/links/:slug` | Admin | Get one |
-| GET | `/api/links/:slug/preview` | Admin | Title + favicon (Redis-cached); SSRF-safe |
+| GET | `/api/links/:slug/preview` | Admin | Title + favicon (Redis-cached); SSRF-safe. Soft-handles upstream non-2xx (parses HTML when present; else hostname fallback) |
 | PATCH | `/api/links/:slug` | Admin | Update fields including password / tags / folder |
 | POST | `/api/links/:slug/status` | Admin | Body `{ "status": "active" \| "quarantined" }` |
 | DELETE | `/api/links/:slug` | Admin | Delete |

@@ -12,8 +12,8 @@ Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url), rebuilt on N
 | **Host** | layurl.com |
 | **Repo** | url-shortener |
 | **Owner** | Operator / maintainer of this repository |
-| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phase 2 ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0)); Phases 3–4 remain implementable from this PRD |
-| **Current phase** | Phase 2 complete ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0)); next is **Phase 3 — Analytics and integrations** |
+| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phase 2 ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0), patch [v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)); Phases 3–4 remain implementable from this PRD |
+| **Current phase** | Phase 2 complete ([v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)); next is **Phase 3 — Analytics and integrations** |
 
 ## Problem
 
@@ -214,7 +214,7 @@ Phase 0 (and Phase 1 status field recommended for one-time/disabled interplay).
 
 - Unit tests for UTM merge; import dry-run; preview SSRF rejects — **passed**
 - Compose smoke: UTM redirect, one-time burn, password unlock, import dry-run, `/` → `/admin/` — **passed**
-- Release: [v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0)
+- Release: [v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0); patch [v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1) (preview soft-fail + checkbox UI)
 
 ---
 

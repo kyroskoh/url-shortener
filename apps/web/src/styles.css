@@ -154,6 +154,26 @@ select {
   font: inherit;
 }
 
+input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  padding: 0;
+  border-radius: 0.25rem;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.check-label {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.55rem;
+  cursor: pointer;
+  color: var(--fg);
+}
+
 input:focus,
 textarea:focus,
 select:focus {

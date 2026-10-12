@@ -60,10 +60,28 @@ async function assertSafeUrl(raw: string): Promise<
   return { ok: true, url };
 }
 
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function parseTitle(html: string): string | null {
+  const og =
+    /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i.exec(html) ||
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i.exec(html);
+  if (og?.[1]) {
+    const t = decodeEntities(og[1]);
+    if (t) return t;
+  }
   const m = /<title[^>]*>([^<]*)<\/title>/i.exec(html);
   if (!m) return null;
-  return m[1].replace(/\s+/g, " ").trim() || null;
+  return decodeEntities(m[1]) || null;
 }
 
 function parseFavicon(html: string, base: URL): string | null {
@@ -81,6 +99,11 @@ function parseFavicon(html: string, base: URL): string | null {
     }
   }
   return new URL("/favicon.ico", base).toString();
+}
+
+function isHtmlContentType(ct: string | null): boolean {
+  if (!ct) return true;
+  return /text\/html|application\/xhtml\+xml/i.test(ct);
 }
 
 export async function getLinkPreview(slug: string): Promise<PreviewResult> {
@@ -113,6 +136,7 @@ export async function getLinkPreview(slug: string): Promise<PreviewResult> {
   }
 
   let html = "";
+  let pageUrl = safe.url;
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
@@ -121,19 +145,15 @@ export async function getLinkPreview(slug: string): Promise<PreviewResult> {
       redirect: "follow",
       signal: controller.signal,
       headers: {
-        "user-agent": "BlinkPreview/0.3 (+https://layurl.com)",
-        accept: "text/html",
+        // Browser-like UA — many hosts 404/403 custom bot agents
+        "user-agent":
+          "Mozilla/5.0 (compatible; BlinkPreview/0.3; +https://layurl.com)",
+        accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+        "accept-language": "en-US,en;q=0.9",
       },
     });
     clearTimeout(timer);
-    if (!res.ok) {
-      return {
-        ok: false,
-        status: 502,
-        error: "preview_fetch_failed",
-        message: `Upstream returned ${res.status}`,
-      };
-    }
+
     const finalUrl = new URL(res.url);
     const finalSafe = await assertSafeUrl(finalUrl.toString());
     if (!finalSafe.ok) {
@@ -144,19 +164,32 @@ export async function getLinkPreview(slug: string): Promise<PreviewResult> {
         message: finalSafe.message,
       };
     }
+    pageUrl = finalSafe.url;
+
+    // Soft-fail: still unfurl HTML from 4xx/5xx error pages when present
+    if (!res.ok && !isHtmlContentType(res.headers.get("content-type"))) {
+      const payload = {
+        title: safe.url.hostname,
+        favicon: new URL("/favicon.ico", safe.url).toString(),
+      };
+      await previewCacheSet(slug, JSON.stringify(payload));
+      return { ok: true, ...payload, cached: false };
+    }
+
     html = await res.text();
     if (html.length > 512_000) html = html.slice(0, 512_000);
   } catch {
-    return {
-      ok: false,
-      status: 502,
-      error: "preview_fetch_failed",
-      message: "Failed to fetch destination",
+    // Network failure — still return a useful hostname fallback
+    const payload = {
+      title: safe.url.hostname,
+      favicon: new URL("/favicon.ico", safe.url).toString(),
     };
+    await previewCacheSet(slug, JSON.stringify(payload));
+    return { ok: true, ...payload, cached: false };
   }
 
-  const title = parseTitle(html);
-  const favicon = parseFavicon(html, safe.url);
+  const title = parseTitle(html) ?? pageUrl.hostname;
+  const favicon = parseFavicon(html, pageUrl);
   const payload = { title, favicon };
   await previewCacheSet(slug, JSON.stringify(payload));
   return { ok: true, ...payload, cached: false };
