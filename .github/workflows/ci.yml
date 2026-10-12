@@ -1,11 +1,13 @@
 name: CI
 
+# Dev: test on pull requests only (no duplicate run on every main push).
+# Release: push a v* tag → one pipeline: test + e2e + GHCR publish.
+# Merge release commits to main first, then tag; do not expect a second CI on main.
 on:
-  push:
-    branches: [main, master]
-    tags: ["v*"]
   pull_request:
     branches: [main, master]
+  push:
+    tags: ["v*"]
 
 permissions:
   contents: read

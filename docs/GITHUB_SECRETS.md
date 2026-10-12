@@ -37,6 +37,16 @@ Store deploy + Cloudflare **apply** secrets on the **`production`** Environment.
 | `HEALTHCHECK_URL` | `{BLINK_BASE_URL}/api/ready` | Post-deploy check |
 | `BLINK_IMAGE_TAG` | workflow input | GHCR tag (`v0.6.0`, `latest`, …) |
 
+## Next step (operator)
+
+1. Repo → **Settings → Environments → New environment** → name `production` (optional: required reviewers).
+2. On that environment (or repo secrets), add the secrets table above. At minimum for Cloudflare dry-run: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_ID`, `CLOUDFLARE_ORIGIN_IPV4`. For deploy: also `BLINK_*`, `POSTGRES_PASSWORD`, `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`.
+3. Set Environment **variables**: `BLINK_BASE_URL=https://layurl.com`, and optionally `BLINK_PUBLIC_MODE`, `BLINK_TURNSTILE_FORCE`, `DEPLOY_PATH`, `HEALTHCHECK_URL`.
+4. **Actions → Deploy → Run workflow**: `cloudflare: dry-run` first (no deploy). Then `apply` when ready. Then `deploy: true` with `image_tag: v0.6.0` (or `latest`).
+5. Confirm health check passes (`/api/ready`).
+
+CI note: tests run on PRs; GHCR publish runs on `v*` tags only (not on every `main` push).
+
 ## Workflow
 
 Manual: **Actions → Deploy → Run workflow**

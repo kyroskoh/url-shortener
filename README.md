@@ -58,7 +58,7 @@ Ideas beyond the roadmap: [ENHANCEMENT.md](ENHANCEMENT.md).
 
 ## CI and images
 
-On push/PR to `main`: typecheck (builds workspace packages first), unit tests, and Playwright E2E against Compose. On `v*` tags: publish `ghcr.io/<owner>/blink-api` and `blink-web` (version tag + `latest`). Manual **Deploy** workflow: Cloudflare dry-run/apply + SSH Compose from GHCR using [GitHub Secrets](docs/GITHUB_SECRETS.md). Local Compose still builds from Dockerfiles; prod overlay: `docker-compose.prod.yml`.
+On **pull requests** to `main`: typecheck (builds workspace packages first), unit tests, and Playwright E2E against Compose. On **`v*` tags** only: the same tests, then publish `ghcr.io/<owner>/blink-api` and `blink-web` (version tag + `latest`) — no second CI when you also push `main`. Manual **Deploy** workflow: Cloudflare dry-run/apply + SSH Compose from GHCR using [GitHub Secrets](docs/GITHUB_SECRETS.md). Local Compose still builds from Dockerfiles; prod overlay: `docker-compose.prod.yml`.
 
 ## Backups
 
