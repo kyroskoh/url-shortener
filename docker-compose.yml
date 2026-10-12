@@ -33,6 +33,10 @@ services:
       DATABASE_URL: postgres://blink:blink@postgres:5432/blink
       REDIS_URL: redis://redis:6379
       PORT: "3000"
+      # Optional custom home page (set BLINK_LANDING_PAGE=/data/landing.html and mount a file):
+      # BLINK_LANDING_PAGE: /data/landing.html
+    # volumes:
+    #   - ./deploy/landing.example.html:/data/landing.html:ro
     depends_on:
       postgres:
         condition: service_healthy

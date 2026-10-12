@@ -1,0 +1,26 @@
+CREATE TABLE IF NOT EXISTS folders (
+  id UUID PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  parent_id UUID REFERENCES folders(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS tags (
+  id UUID PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
+);
+
+ALTER TABLE links
+  ADD COLUMN IF NOT EXISTS password_hash TEXT,
+  ADD COLUMN IF NOT EXISTS one_time BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS folder_id UUID REFERENCES folders(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS link_tags (
+  slug VARCHAR(64) NOT NULL REFERENCES links(slug) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (slug, tag_id)
+);
+
+CREATE INDEX IF NOT EXISTS links_folder_id_idx ON links (folder_id);
+CREATE INDEX IF NOT EXISTS link_tags_tag_id_idx ON link_tags (tag_id);
+CREATE INDEX IF NOT EXISTS tags_name_idx ON tags (name);
+CREATE INDEX IF NOT EXISTS folders_parent_id_idx ON folders (parent_id);

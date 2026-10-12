@@ -86,3 +86,50 @@ export function clientIp(request: FastifyRequest): string {
   }
   return request.ip;
 }
+
+export async function hashLinkPassword(password: string): Promise<string> {
+  return argon2.hash(password);
+}
+
+export async function verifyLinkPassword(
+  hash: string,
+  password: string,
+): Promise<boolean> {
+  try {
+    return await argon2.verify(hash, password);
+  } catch {
+    return false;
+  }
+}
+
+/** Short-lived gate cookie after successful link password unlock (1 hour). */
+export function createLinkGateToken(slug: string): string {
+  const exp = Date.now() + 60 * 60 * 1000;
+  const payload = `link:${slug}:${exp}`;
+  return `${payload}.${sign(payload)}`;
+}
+
+export function verifyLinkGateToken(
+  token: string | undefined,
+  slug: string,
+): boolean {
+  if (!token) return false;
+  const [payload, sig] = token.split(".");
+  if (!payload || !sig) return false;
+  const expected = sign(payload);
+  try {
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
+  } catch {
+    return false;
+  }
+  const parts = payload.split(":");
+  if (parts[0] !== "link" || parts[1] !== slug) return false;
+  const exp = Number(parts[2]);
+  return Number.isFinite(exp) && exp > Date.now();
+}
+
+export function linkGateCookieName(slug: string): string {
+  return `blink_gate_${slug}`;
+}

@@ -12,8 +12,8 @@ Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url), rebuilt on N
 | **Host** | layurl.com |
 | **Repo** | url-shortener |
 | **Owner** | Operator / maintainer of this repository |
-| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phases 2–4 remain implementable from this PRD |
-| **Current phase** | Phase 1 complete ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); next is **Phase 2 — Product depth** |
+| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phase 2 ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0)); Phases 3–4 remain implementable from this PRD |
+| **Current phase** | Phase 2 complete ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0)); next is **Phase 3 — Analytics and integrations** |
 
 ## Problem
 
@@ -25,7 +25,8 @@ Most URL shorteners are bloated, hard to self-host, or lack essentials (custom s
 
 - Phase 0 application (MVP) + documentation + Cloudflare provisioner — **done** ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0))
 - Phase 1 trust/abuse features — **done**
-- Full specifications for Phases 2–4 product features (this document; Phase 2 is next to implement)
+- Phase 2 product depth — **done**
+- Full specifications for Phases 3–4 product features (this document; Phase 3 is next to implement)
 
 ### Non-goals (all phases)
 
@@ -112,7 +113,7 @@ None (greenfield).
 
 ## Implementing Phase 1–4 product features
 
-Phase **1** is the active implementation target. Phases **2–4** remain fully specified below for later passes without re-discovery.
+Phases **0–2** are complete. Phase **3** is the active implementation target. Phase **4** remains fully specified below for later passes without re-discovery.
 
 ---
 
@@ -164,7 +165,7 @@ Phase 0 complete ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/ta
 
 ---
 
-## Phase 2 — Product depth
+## Phase 2 — Product depth (complete)
 
 ### Goal
 
@@ -196,13 +197,13 @@ Phase 0 (and Phase 1 status field recommended for one-time/disabled interplay).
 
 ### Acceptance criteria
 
-- [ ] UTM fields append to destination without breaking existing query strings
-- [ ] Preview returns title for a known HTML fixture; second call is cache hit
-- [ ] Bulk import dry-run reports row errors without writing; apply writes valid rows
-- [ ] Tag/folder filters return correct subsets
-- [ ] Password-protected link prompts then redirects; wrong password fails
-- [ ] One-time link works once then 404/410
-- [ ] Custom landing page served when env set
+- [x] UTM fields append to destination without breaking existing query strings
+- [x] Preview returns title for a known HTML fixture; second call is cache hit
+- [x] Bulk import dry-run reports row errors without writing; apply writes valid rows
+- [x] Tag/folder filters return correct subsets
+- [x] Password-protected link prompts then redirects; wrong password fails
+- [x] One-time link works once then 404/410
+- [x] Custom landing page served when env set (admin UI at `/admin/`; `/` → landing or redirect)
 
 ### Non-goals (Phase 2)
 
@@ -211,7 +212,9 @@ Phase 0 (and Phase 1 status field recommended for one-time/disabled interplay).
 
 ### Verification
 
-- Unit tests for UTM merge; API tests for bulk/tags/password/one-time; compose mount smoke for landing page
+- Unit tests for UTM merge; import dry-run; preview SSRF rejects — **passed**
+- Compose smoke: UTM redirect, one-time burn, password unlock, import dry-run, `/` → `/admin/` — **passed**
+- Release: [v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0)
 
 ---
 

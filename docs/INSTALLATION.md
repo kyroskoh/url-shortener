@@ -15,7 +15,8 @@ docker compose up --build
 
 | URL | Service |
 |-----|---------|
-| http://localhost/ | Web UI (nginx → web) |
+| http://localhost/ | Custom landing if `BLINK_LANDING_PAGE` set; else `302` → `/admin/` |
+| http://localhost/admin/ | Web UI (nginx → web) |
 | http://localhost/api/ | API (nginx → api) |
 | http://localhost/api/docs | OpenAPI UI |
 | http://localhost/{slug} | Redirect (nginx → api) |
@@ -46,6 +47,8 @@ All app settings use the `BLINK_*` prefix. See [`.env.example`](../.env.example)
 | `BLINK_URL_CHECK_PROVIDER` | `none` | `none` \| `blocklist` \| `http` |
 | `BLINK_URL_CHECK_BLOCKLIST_PATH` | empty | Host blocklist file |
 | `BLINK_URL_CHECK_HTTP_URL` | empty | External URL check endpoint |
+| `BLINK_PREVIEW_TTL_SEC` | `3600` | Destination preview Redis TTL |
+| `BLINK_LANDING_PAGE` | empty | In-container path to custom HTML for `/` |
 | `DATABASE_URL` | compose default | Postgres |
 | `REDIS_URL` | compose default | Redis |
 
@@ -59,9 +62,16 @@ The API runs Drizzle migrations on startup. To roll back a bad deploy: restore a
 
 Compose includes **nginx** (`deploy/nginx.conf`):
 
+- `/` → `api` `site-home` (custom landing file or `302` to `/admin/`)
+- `/admin/` → `web:80` (Vite SPA; path prefix stripped)
 - `/api/` → `api:3000`
-- `/` static UI → `web:80` (built assets served by nginx in the web container)
 - `/{slug}` short paths → `api` redirect handler (`/r/:slug`)
+
+### Custom landing page
+
+1. Set `BLINK_LANDING_PAGE=/data/landing.html` on the `api` service
+2. Mount a file, e.g. `./deploy/landing.example.html:/data/landing.html:ro`
+3. Restart Compose — `/` serves that HTML; admin UI remains at `/admin/`
 
 UI timestamps (created / last hit / expires) use month abbreviations (MMM) and show both UTC and local time.
 

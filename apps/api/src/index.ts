@@ -34,13 +34,28 @@ async function main() {
       info: {
         title: "Blink API",
         description: "URL shortener API for layurl.com",
-        version: "0.1.0",
+        version: "0.3.0",
       },
     },
   });
   await app.register(swaggerUi, {
     routePrefix: "/docs",
   });
+
+  app.addContentTypeParser(
+    "text/plain",
+    { parseAs: "string" },
+    (_req, body, done) => {
+      done(null, body);
+    },
+  );
+  app.addContentTypeParser(
+    "text/csv",
+    { parseAs: "string" },
+    (_req, body, done) => {
+      done(null, body);
+    },
+  );
 
   await registerRoutes(app);
 
@@ -54,11 +69,15 @@ async function main() {
       slug === "config" ||
       slug === "links" ||
       slug === "auth" ||
-      slug === "r"
+      slug === "r" ||
+      slug === "tags" ||
+      slug === "folders" ||
+      slug === "site-home" ||
+      slug === "admin"
     ) {
       return reply.callNotFound();
     }
-    return handleRedirect(slug, reply);
+    return handleRedirect(slug, request, reply);
   });
 
   const flushTimer = setInterval(async () => {

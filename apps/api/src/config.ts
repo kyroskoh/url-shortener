@@ -34,6 +34,8 @@ export const config = {
     | "http",
   urlCheckBlocklistPath: process.env.BLINK_URL_CHECK_BLOCKLIST_PATH ?? "",
   urlCheckHttpUrl: process.env.BLINK_URL_CHECK_HTTP_URL ?? "",
+  landingPage: process.env.BLINK_LANDING_PAGE ?? "",
+  previewTtlSec: int(process.env.BLINK_PREVIEW_TTL_SEC, 3600),
   databaseUrl:
     process.env.DATABASE_URL ?? "postgres://blink:blink@localhost:5432/blink",
   redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",

@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { api, type Config, type Link } from "./api";
+import { api, type Config, type Folder, type Link, type Tag } from "./api";
 import { formatDateTimeBoth } from "./datetime";
 
 declare global {
@@ -22,8 +22,21 @@ export function App() {
   const [slug, setSlug] = useState("");
   const [notes, setNotes] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
+  const [utmSource, setUtmSource] = useState("");
+  const [utmMedium, setUtmMedium] = useState("");
+  const [utmCampaign, setUtmCampaign] = useState("");
+  const [utmTerm, setUtmTerm] = useState("");
+  const [utmContent, setUtmContent] = useState("");
+  const [linkPassword, setLinkPassword] = useState("");
+  const [oneTime, setOneTime] = useState(false);
+  const [tagNames, setTagNames] = useState("");
+  const [folderId, setFolderId] = useState("");
   const [filter, setFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [folderFilter, setFolderFilter] = useState("");
   const [links, setLinks] = useState<Link[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [created, setCreated] = useState<Link | null>(null);
@@ -31,20 +44,46 @@ export function App() {
   const [turnstileToken, setTurnstileToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<Link | null>(null);
+  const [editTags, setEditTags] = useState("");
+  const [preview, setPreview] = useState<{
+    slug: string;
+    title: string | null;
+    favicon: string | null;
+    cached: boolean;
+  } | null>(null);
+  const [importCsv, setImportCsv] = useState("");
+  const [importResult, setImportResult] = useState<string>("");
+  const [newTag, setNewTag] = useState("");
+  const [newFolder, setNewFolder] = useState("");
 
   const refreshAuth = useCallback(async () => {
     const me = await api.me();
     setAuthed(me.status === 200);
   }, []);
 
+  const refreshMeta = useCallback(async () => {
+    if (!authed) {
+      setTags([]);
+      setFolders([]);
+      return;
+    }
+    const [t, f] = await Promise.all([api.tags(), api.folders()]);
+    if (t.data) setTags(t.data.tags);
+    if (f.data) setFolders(f.data.folders);
+  }, [authed]);
+
   const refreshLinks = useCallback(async () => {
     if (!authed) {
       setLinks([]);
       return;
     }
-    const res = await api.list(filter || undefined);
+    const res = await api.list({
+      q: filter || undefined,
+      tag: tagFilter || undefined,
+      folder: folderFilter || undefined,
+    });
     if (res.data) setLinks(res.data.links);
-  }, [authed, filter]);
+  }, [authed, filter, tagFilter, folderFilter]);
 
   useEffect(() => {
     void (async () => {
@@ -60,6 +99,10 @@ export function App() {
   useEffect(() => {
     void refreshLinks();
   }, [refreshLinks]);
+
+  useEffect(() => {
+    void refreshMeta();
+  }, [refreshMeta]);
 
   useEffect(() => {
     if (authed || !config?.turnstileRequired || !config.turnstileSiteKey) return;
@@ -108,6 +151,22 @@ export function App() {
     setLinks([]);
   }
 
+  function resetCreateForm() {
+    setDestination("");
+    setSlug("");
+    setNotes("");
+    setExpiresAt("");
+    setUtmSource("");
+    setUtmMedium("");
+    setUtmCampaign("");
+    setUtmTerm("");
+    setUtmContent("");
+    setLinkPassword("");
+    setOneTime(false);
+    setTagNames("");
+    setFolderId("");
+  }
+
   async function onCreate(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -118,9 +177,23 @@ export function App() {
         destination,
         notes: notes || null,
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+        oneTime,
       };
       if (slug.trim()) body.slug = slug.trim();
       if (!authed && turnstileToken) body.turnstileToken = turnstileToken;
+      if (utmSource.trim()) body.utmSource = utmSource.trim();
+      if (utmMedium.trim()) body.utmMedium = utmMedium.trim();
+      if (utmCampaign.trim()) body.utmCampaign = utmCampaign.trim();
+      if (utmTerm.trim()) body.utmTerm = utmTerm.trim();
+      if (utmContent.trim()) body.utmContent = utmContent.trim();
+      if (linkPassword.trim()) body.password = linkPassword.trim();
+      if (authed && tagNames.trim()) {
+        body.tagNames = tagNames
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean);
+      }
+      if (authed && folderId) body.folderId = folderId;
 
       const res = await api.create(body);
       if (res.error) {
@@ -130,12 +203,10 @@ export function App() {
       if (res.data) {
         setCreated(res.data.link);
         setWarnings(res.data.warnings ?? []);
-        setDestination("");
-        setSlug("");
-        setNotes("");
-        setExpiresAt("");
+        resetCreateForm();
         setInfo("Short link created");
         await refreshLinks();
+        await refreshMeta();
       }
     } finally {
       setBusy(false);
@@ -169,6 +240,12 @@ export function App() {
         destination: editing.destination,
         notes: editing.notes,
         expiresAt: editing.expiresAt,
+        oneTime: editing.oneTime,
+        folderId: editing.folderId,
+        tagNames: editTags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
       });
       if (res.error) {
         setError(res.error);
@@ -177,6 +254,7 @@ export function App() {
       setEditing(null);
       setInfo("Link updated");
       await refreshLinks();
+      await refreshMeta();
     } finally {
       setBusy(false);
     }
@@ -207,6 +285,73 @@ export function App() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function loadPreview(slug: string) {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await api.preview(slug);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      if (res.data) {
+        setPreview({
+          slug,
+          title: res.data.title,
+          favicon: res.data.favicon,
+          cached: res.data.cached,
+        });
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runImport(dryRun: boolean) {
+    setBusy(true);
+    setError("");
+    setImportResult("");
+    try {
+      const res = await api.importCsv(importCsv, dryRun);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      if (res.data) {
+        setImportResult(
+          `${dryRun ? "Dry-run" : "Import"}: ${res.data.succeeded} ok, ${res.data.failed} failed of ${res.data.total}`,
+        );
+        if (!dryRun) await refreshLinks();
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addTag(e: FormEvent) {
+    e.preventDefault();
+    if (!newTag.trim()) return;
+    const res = await api.createTag(newTag.trim());
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
+    setNewTag("");
+    await refreshMeta();
+  }
+
+  async function addFolder(e: FormEvent) {
+    e.preventDefault();
+    if (!newFolder.trim()) return;
+    const res = await api.createFolder(newFolder.trim());
+    if (res.error) {
+      setError(res.error);
+      return;
+    }
+    setNewFolder("");
+    await refreshMeta();
   }
 
   const canCreate = authed || Boolean(config?.publicMode);
@@ -279,6 +424,88 @@ export function App() {
                 onChange={(e) => setExpiresAt(e.target.value)}
               />
             </label>
+
+            <details className="advanced">
+              <summary>Advanced options</summary>
+              <div className="form-grid" style={{ marginTop: "0.75rem" }}>
+                <label>
+                  utm_source
+                  <input
+                    value={utmSource}
+                    onChange={(e) => setUtmSource(e.target.value)}
+                  />
+                </label>
+                <label>
+                  utm_medium
+                  <input
+                    value={utmMedium}
+                    onChange={(e) => setUtmMedium(e.target.value)}
+                  />
+                </label>
+                <label>
+                  utm_campaign
+                  <input
+                    value={utmCampaign}
+                    onChange={(e) => setUtmCampaign(e.target.value)}
+                  />
+                </label>
+                <label>
+                  utm_term
+                  <input value={utmTerm} onChange={(e) => setUtmTerm(e.target.value)} />
+                </label>
+                <label>
+                  utm_content
+                  <input
+                    value={utmContent}
+                    onChange={(e) => setUtmContent(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Link password (optional)
+                  <input
+                    type="password"
+                    value={linkPassword}
+                    onChange={(e) => setLinkPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                </label>
+                <label className="row" style={{ alignItems: "center", gap: "0.5rem" }}>
+                  <input
+                    type="checkbox"
+                    checked={oneTime}
+                    onChange={(e) => setOneTime(e.target.checked)}
+                  />
+                  One-time (burn after first redirect)
+                </label>
+                {authed && (
+                  <>
+                    <label>
+                      Tags (comma-separated)
+                      <input
+                        value={tagNames}
+                        onChange={(e) => setTagNames(e.target.value)}
+                        placeholder="campaign, docs"
+                      />
+                    </label>
+                    <label>
+                      Folder
+                      <select
+                        value={folderId}
+                        onChange={(e) => setFolderId(e.target.value)}
+                      >
+                        <option value="">None</option>
+                        {folders.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </>
+                )}
+              </div>
+            </details>
+
             {!authed && config?.turnstileRequired && config.turnstileSiteKey && (
               <div id="turnstile-box" aria-label="Cloudflare Turnstile challenge" />
             )}
@@ -344,15 +571,126 @@ export function App() {
 
       {authed && (
         <>
+          <section className="panel">
+            <h2 style={{ marginTop: 0 }}>Bulk import</h2>
+            <p className="meta">
+              CSV columns: slug, destination, notes, expires_at
+            </p>
+            <textarea
+              rows={4}
+              value={importCsv}
+              onChange={(e) => setImportCsv(e.target.value)}
+              placeholder={"slug,destination,notes,expires_at\nhello,https://example.com,,"}
+            />
+            <div className="row" style={{ marginTop: "0.75rem" }}>
+              <button
+                type="button"
+                className="secondary"
+                disabled={busy || !importCsv.trim()}
+                onClick={() => void runImport(true)}
+              >
+                Dry-run
+              </button>
+              <button
+                type="button"
+                disabled={busy || !importCsv.trim()}
+                onClick={() => void runImport(false)}
+              >
+                Import
+              </button>
+            </div>
+            {importResult && <p className="msg ok">{importResult}</p>}
+          </section>
+
+          <section className="panel">
+            <h2 style={{ marginTop: 0 }}>Tags &amp; folders</h2>
+            <form className="row" onSubmit={(e) => void addTag(e)}>
+              <input
+                placeholder="New tag"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+              />
+              <button type="submit">Add tag</button>
+            </form>
+            <form className="row" onSubmit={(e) => void addFolder(e)} style={{ marginTop: "0.5rem" }}>
+              <input
+                placeholder="New folder"
+                value={newFolder}
+                onChange={(e) => setNewFolder(e.target.value)}
+              />
+              <button type="submit">Add folder</button>
+            </form>
+            <p className="meta" style={{ marginTop: "0.75rem" }}>
+              Tags: {tags.map((t) => t.name).join(", ") || "none"}
+            </p>
+            <p className="meta">
+              Folders: {folders.map((f) => f.name).join(", ") || "none"}
+            </p>
+          </section>
+
           <div className="toolbar">
             <h2 style={{ margin: 0 }}>Your links</h2>
             <input
               placeholder="Filter slug, URL, notes"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              style={{ maxWidth: 280 }}
+              style={{ maxWidth: 200 }}
             />
+            <input
+              placeholder="Tag filter"
+              value={tagFilter}
+              onChange={(e) => setTagFilter(e.target.value)}
+              style={{ maxWidth: 140 }}
+              list="tag-list"
+            />
+            <datalist id="tag-list">
+              {tags.map((t) => (
+                <option key={t.id} value={t.name} />
+              ))}
+            </datalist>
+            <select
+              value={folderFilter}
+              onChange={(e) => setFolderFilter(e.target.value)}
+              aria-label="Folder filter"
+              style={{ maxWidth: 160 }}
+            >
+              <option value="">All folders</option>
+              {folders.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
           </div>
+
+          {preview && (
+            <div className="panel" style={{ marginBottom: "1rem" }}>
+              <p className="meta">
+                Preview for <code>{preview.slug}</code>
+                {preview.cached ? " (cached)" : ""}
+              </p>
+              <div className="row" style={{ alignItems: "center" }}>
+                {preview.favicon && (
+                  <img
+                    src={preview.favicon}
+                    alt=""
+                    width={20}
+                    height={20}
+                    style={{ borderRadius: 4 }}
+                  />
+                )}
+                <strong>{preview.title ?? "(no title)"}</strong>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setPreview(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="list">
             {links.map((link) => (
               <article className="item" key={link.slug}>
@@ -375,6 +713,42 @@ export function App() {
                           setEditing({ ...editing, notes: e.target.value })
                         }
                       />
+                    </label>
+                    <label>
+                      Tags (comma-separated)
+                      <input
+                        value={editTags}
+                        onChange={(e) => setEditTags(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Folder
+                      <select
+                        value={editing.folderId ?? ""}
+                        onChange={(e) =>
+                          setEditing({
+                            ...editing,
+                            folderId: e.target.value || null,
+                          })
+                        }
+                      >
+                        <option value="">None</option>
+                        {folders.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="row" style={{ alignItems: "center", gap: "0.5rem" }}>
+                      <input
+                        type="checkbox"
+                        checked={editing.oneTime}
+                        onChange={(e) =>
+                          setEditing({ ...editing, oneTime: e.target.checked })
+                        }
+                      />
+                      One-time
                     </label>
                     <div className="row">
                       <button type="submit" disabled={busy}>
@@ -399,7 +773,14 @@ export function App() {
                     <p className="meta">
                       status: <strong>{link.status}</strong>
                       {link.status === "quarantined" ? " (redirects blocked)" : ""}
+                      {link.hasPassword ? " · password" : ""}
+                      {link.oneTime ? " · one-time" : ""}
                     </p>
+                    {link.tags.length > 0 && (
+                      <p className="meta">
+                        tags: {link.tags.map((t) => t.name).join(", ")}
+                      </p>
+                    )}
                     <p className="meta">
                       {link.hits} hits
                       {link.createdAt
@@ -420,9 +801,20 @@ export function App() {
                       <button
                         type="button"
                         className="secondary"
-                        onClick={() => setEditing(link)}
+                        onClick={() => {
+                          setEditing(link);
+                          setEditTags(link.tags.map((t) => t.name).join(", "));
+                        }}
                       >
                         Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={busy}
+                        onClick={() => void loadPreview(link.slug)}
+                      >
+                        Preview
                       </button>
                       {link.status === "active" ? (
                         <button

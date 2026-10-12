@@ -1,3 +1,6 @@
+export type Tag = { id: string; name: string };
+export type Folder = { id: string; name: string; parentId: string | null };
+
 export type Link = {
   slug: string;
   destination: string;
@@ -9,6 +12,10 @@ export type Link = {
   createdAt: string;
   updatedAt: string;
   shortUrl: string;
+  hasPassword: boolean;
+  oneTime: boolean;
+  folderId: string | null;
+  tags: Tag[];
 };
 
 export type Config = {
@@ -21,19 +28,36 @@ export type Config = {
   turnstileRequired: boolean;
   turnstileConfigured?: boolean;
   urlCheckProvider?: string;
+  customLanding?: boolean;
+  adminPath?: string;
+};
+
+export type Preview = {
+  title: string | null;
+  favicon: string | null;
+  cached: boolean;
+};
+
+export type ImportResult = {
+  dryRun: boolean;
+  total: number;
+  succeeded: number;
+  failed: number;
+  rows: { row: number; ok: boolean; slug?: string; error?: string }[];
 };
 
 async function req<T>(
   path: string,
   init?: RequestInit,
 ): Promise<{ data?: T; error?: string; status: number }> {
+  const headers = new Headers(init?.headers);
+  if (!headers.has("content-type") && init?.body != null) {
+    headers.set("content-type", "application/json");
+  }
   const res = await fetch(`/api${path}`, {
-    credentials: "include",
-    headers: {
-      "content-type": "application/json",
-      ...(init?.headers ?? {}),
-    },
     ...init,
+    credentials: "include",
+    headers,
   });
   const contentType = res.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
@@ -52,6 +76,18 @@ async function req<T>(
   return { status: res.status, data: undefined as T };
 }
 
+export type ListParams = { q?: string; tag?: string; folder?: string };
+
+function listQuery(params?: ListParams): string {
+  if (!params) return "";
+  const sp = new URLSearchParams();
+  if (params.q) sp.set("q", params.q);
+  if (params.tag) sp.set("tag", params.tag);
+  if (params.folder) sp.set("folder", params.folder);
+  const s = sp.toString();
+  return s ? `?${s}` : "";
+}
+
 export const api = {
   config: () => req<Config>("/config"),
   login: (password: string) =>
@@ -61,8 +97,8 @@ export const api = {
     }),
   logout: () => req<{ ok: boolean }>("/auth/logout", { method: "POST" }),
   me: () => req<{ authenticated: boolean }>("/auth/me"),
-  list: (q?: string) =>
-    req<{ links: Link[] }>(`/links${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  list: (params?: ListParams) =>
+    req<{ links: Link[] }>(`/links${listQuery(params)}`),
   create: (body: Record<string, unknown>) =>
     req<{ link: Link; warnings: string[] }>("/links", {
       method: "POST",
@@ -81,6 +117,26 @@ export const api = {
     req<{ link: Link }>(`/links/${encodeURIComponent(slug)}/status`, {
       method: "POST",
       body: JSON.stringify({ status }),
+    }),
+  preview: (slug: string) =>
+    req<Preview>(`/links/${encodeURIComponent(slug)}/preview`),
+  importCsv: (csv: string, dryRun: boolean) =>
+    req<ImportResult>(`/links/import?dryRun=${dryRun ? "true" : "false"}`, {
+      method: "POST",
+      headers: { "content-type": "text/plain" },
+      body: csv,
+    }),
+  tags: () => req<{ tags: Tag[] }>("/tags"),
+  createTag: (name: string) =>
+    req<{ tag: Tag }>("/tags", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
+  folders: () => req<{ folders: Folder[] }>("/folders"),
+  createFolder: (name: string, parentId?: string | null) =>
+    req<{ folder: Folder }>("/folders", {
+      method: "POST",
+      body: JSON.stringify({ name, parentId: parentId ?? null }),
     }),
   exportUrl: "/api/links/export.csv",
   qrUrl: (slug: string) => `/api/links/${encodeURIComponent(slug)}/qr`,

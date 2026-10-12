@@ -2,6 +2,8 @@
 
 Base path (via nginx): `/api`. OpenAPI UI: `/api/docs`.
 
+Admin UI: `/admin/` (home `/` redirects there unless `BLINK_LANDING_PAGE` is set).
+
 Auth (admin routes):
 
 - Session cookie after `POST /api/auth/login`, or
@@ -30,30 +32,75 @@ Public create (when `BLINK_PUBLIC_MODE=true`) may omit auth; may require Turnsti
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/config` | No | Site title, public mode, Turnstile site key, base URL |
+| GET | `/api/config` | No | Site title, public mode, Turnstile, `adminPath`, `customLanding` |
+
+### Tags & folders
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/tags` | Admin | List tags |
+| POST | `/api/tags` | Admin | Body `{ "name" }` |
+| DELETE | `/api/tags/:id` | Admin | Delete tag |
+| GET | `/api/folders` | Admin | List folders |
+| POST | `/api/folders` | Admin | Body `{ "name", "parentId?" }` |
+| DELETE | `/api/folders/:id` | Admin | Delete folder |
 
 ### Links
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/links` | Admin | List/filter `?q=` |
+| GET | `/api/links` | Admin | List/filter `?q=` `?tag=` `?folder=` |
 | GET | `/api/links/export.csv` | Admin | CSV export |
-| POST | `/api/links` | Admin or public | Create `{ destination, slug?, notes?, expiresAt?, turnstileToken? }` |
+| POST | `/api/links/import` | Admin | CSV body (`text/plain` or `{ csv }`); `?dryRun=true` validates without writing |
+| POST | `/api/links` | Admin or public | Create (see body below) |
 | GET | `/api/links/:slug` | Admin | Get one |
-| PATCH | `/api/links/:slug` | Admin | Update (destination, notes, expiresAt, status) |
+| GET | `/api/links/:slug/preview` | Admin | Title + favicon (Redis-cached); SSRF-safe |
+| PATCH | `/api/links/:slug` | Admin | Update fields including password / tags / folder |
 | POST | `/api/links/:slug/status` | Admin | Body `{ "status": "active" \| "quarantined" }` |
 | DELETE | `/api/links/:slug` | Admin | Delete |
-| GET | `/api/links/:slug/qr` | Admin or owner flow | PNG/SVG QR for short URL |
+| GET | `/api/links/:slug/qr` | Admin | PNG QR for short URL |
+
+**Create body**
+
+```json
+{
+  "destination": "https://example.com/path?ref=1",
+  "slug": "optional",
+  "notes": null,
+  "expiresAt": null,
+  "turnstileToken": "optional",
+  "utmSource": "newsletter",
+  "utmMedium": "email",
+  "utmCampaign": "spring",
+  "utmTerm": null,
+  "utmContent": null,
+  "password": "optional-gate-password",
+  "oneTime": false,
+  "tagNames": ["docs"],
+  "tagIds": [],
+  "folderId": null
+}
+```
+
+UTM fields are merged into the stored destination at create time (existing query keys kept; provided `utm_*` overwrite).
+
+Link DTO includes `hasPassword`, `oneTime`, `folderId`, `tags[]` (never returns password hash).
 
 Quarantined links keep the slug but redirects return branded **410 Link unavailable** (see [ABUSE.md](ABUSE.md)).
 
-Duplicate destination: create response may include `warnings: ["duplicate_destination"]` with existing slug(s).
+Duplicate destination: create response may include `warnings: ["duplicate_destination"]`.
+
+**Bulk import CSV columns:** `slug,destination,notes,expires_at`
 
 ### Redirect (not under `/api`)
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/{slug}` | No | `302` to destination; `404`/`410` branded HTML |
+| GET | `/{slug}` | No | `302` to destination; `404`/`410` branded HTML; password gate when set |
+| POST | `/api/r/:slug/unlock` | No | Form/JSON `{ password }` → gate cookie + redirect |
+| GET | `/` | No | Custom landing HTML if `BLINK_LANDING_PAGE` set; else `302` → `/admin/` |
+
+Password-protected and one-time links are not Redis-cached for redirects. One-time links are deleted after the first successful `302`.
 
 Reserved slugs never redirect (handled as app routes or 404).
 

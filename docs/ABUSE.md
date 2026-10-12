@@ -10,6 +10,8 @@ How operators handle bad or spammy short links while staying privacy-respecting 
 | **Re-enable** | Sets `status` back to `active`. Redis redirect cache for that slug is cleared so the destination works again. |
 | **Delete** | Permanently removes the link row. |
 
+Password-protected and one-time links can still be quarantined; quarantine is checked before the password gate and before redirect.
+
 ## Report a bad link
 
 1. Note the short URL slug (path after `/`).

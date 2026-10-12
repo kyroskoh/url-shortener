@@ -9,6 +9,7 @@ export const redis = new Redis(config.redisUrl, {
 const CACHE_PREFIX = "blink:redir:";
 const HITS_PREFIX = "blink:hits:";
 const RATE_PREFIX = "blink:rate:";
+const PREVIEW_PREFIX = "blink:preview:";
 
 export async function cacheGet(slug: string): Promise<string | null> {
   return redis.get(CACHE_PREFIX + slug);
@@ -46,4 +47,16 @@ export async function rateLimit(
   }
   const allowed = count <= config.rateLimitMax;
   return { allowed, remaining: Math.max(0, config.rateLimitMax - count) };
+}
+
+export async function previewCacheGet(slug: string): Promise<string | null> {
+  return redis.get(PREVIEW_PREFIX + slug);
+}
+
+export async function previewCacheSet(slug: string, json: string): Promise<void> {
+  await redis.set(PREVIEW_PREFIX + slug, json, "EX", config.previewTtlSec);
+}
+
+export async function previewCacheDel(slug: string): Promise<void> {
+  await redis.del(PREVIEW_PREFIX + slug);
 }

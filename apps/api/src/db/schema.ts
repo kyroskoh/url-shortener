@@ -1,10 +1,24 @@
 import {
   bigint,
+  boolean,
   pgTable,
+  primaryKey,
   text,
   timestamp,
+  uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+
+export const folders = pgTable("folders", {
+  id: uuid("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  parentId: uuid("parent_id"),
+});
+
+export const tags = pgTable("tags", {
+  id: uuid("id").primaryKey(),
+  name: text("name").notNull().unique(),
+});
 
 export const links = pgTable("links", {
   slug: varchar("slug", { length: 64 }).primaryKey(),
@@ -14,9 +28,29 @@ export const links = pgTable("links", {
   hits: bigint("hits", { mode: "number" }).notNull().default(0),
   lastHitAt: timestamp("last_hit_at", { withTimezone: true }),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
+  passwordHash: text("password_hash"),
+  oneTime: boolean("one_time").notNull().default(false),
+  folderId: uuid("folder_id").references(() => folders.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const linkTags = pgTable(
+  "link_tags",
+  {
+    slug: varchar("slug", { length: 64 })
+      .notNull()
+      .references(() => links.slug, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.slug, t.tagId] }),
+  }),
+);
+
 export type Link = typeof links.$inferSelect;
 export type NewLink = typeof links.$inferInsert;
+export type Folder = typeof folders.$inferSelect;
+export type Tag = typeof tags.$inferSelect;
