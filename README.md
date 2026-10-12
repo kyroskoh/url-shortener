@@ -62,7 +62,17 @@ Ideas beyond the roadmap: [ENHANCEMENT.md](ENHANCEMENT.md).
 
 On **pull requests** to `main`: typecheck (builds workspace packages first), unit tests, and Playwright E2E against Compose. On **`v*` tags** only: the same tests, then publish `ghcr.io/<owner>/blink-api` and `blink-web` (version tag + `latest`) — no second CI when you also push `main`.
 
-**Production (no dashboard clicking):** copy `.env.production.example` → `.env.production`, then `npm run ops:ship` (bootstraps GitHub Environment secrets, Cloudflare apply, GHCR Compose deploy + health check). See [docs/GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md). Local Compose still builds from Dockerfiles; prod overlay: `docker-compose.prod.yml`.
+**Production (no dashboard clicking):**
+
+```bash
+cp .env.production.example .env.production
+# fill secrets; prefer DEPLOY_SSH_KEY_FILE=/path/to/key
+
+gh auth login   # once, if needed
+npm run ops:ship   # or: npm run ops:cf-dry-run first
+```
+
+See [docs/GITHUB_SECRETS.md](docs/GITHUB_SECRETS.md). Local Compose still builds from Dockerfiles; prod overlay: `docker-compose.prod.yml`.
 
 ## Backups
 
