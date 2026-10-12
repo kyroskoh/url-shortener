@@ -65,7 +65,7 @@ Exact cache expression is printed by the script. Prefer bypass for dynamic `/:sl
 ### Dry-run vs apply
 
 - `--dry-run` (default): prints planned API calls; still needs credentials (reads zone/DNS)
-- `--apply`: executes writes; on partial failure exits non-zero and prints **manual fallback** steps
+- `--apply`: executes writes; DNS/SSL failures exit non-zero. Cache Rules gaps (404/403) are **non-fatal** and print **manual fallback** steps
 - Refuses without `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_ID`, and an origin IPv4 and/or IPv6
 
 ## When the Cloudflare DNS API is not enough

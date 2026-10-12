@@ -174,10 +174,14 @@ async function ensureCacheBypassRule() {
   );
 
   if (!entry.ok) {
-    printManual(
-      `Rulesets API unavailable (${entry.status}). Configure Cache Rules in the dashboard.`,
-    );
-    return { ok: false, error: entry.json };
+    // Plan/API often has no cache-settings entrypoint (404) or lacks scope (403).
+    // DNS/SSL still applied — treat as operator gap, not a hard apply failure.
+    return {
+      ok: false,
+      soft: true,
+      error: entry.json,
+      reason: `Rulesets API unavailable (${entry.status}). Configure Cache Rules in the dashboard.`,
+    };
   }
 
   const ruleset = entry.json.result;
@@ -200,9 +204,12 @@ async function ensureCacheBypassRule() {
     body: { rules },
   });
   if (!update.ok) {
-    printManual(
-      `Failed to update cache ruleset: ${JSON.stringify(update.json?.errors ?? update.json)}`,
-    );
+    return {
+      ok: false,
+      soft: true,
+      error: update.json,
+      reason: `Failed to update cache ruleset: ${JSON.stringify(update.json?.errors ?? update.json)}`,
+    };
   }
   return update;
 }
@@ -247,7 +254,9 @@ async function main() {
   }
 
   const cache = await ensureCacheBypassRule();
-  if (!cache.ok) failures.push(["cache rule", cache]);
+  if (!cache.ok && !cache.soft) {
+    failures.push(["cache rule", cache]);
+  }
 
   if (failures.length) {
     console.error("\nSome API operations failed:");
@@ -261,8 +270,18 @@ async function main() {
   console.log(
     DRY ? "\nDry-run complete. Re-run with --apply to write." : "\nApply complete.",
   );
-  console.log("Remaining operator-only gaps (always review):");
-  printManual();
+  if (cache.soft) {
+    console.warn(
+      `\nCache rule skipped (non-fatal): ${cache.reason ?? "configure in dashboard"}`,
+    );
+    if (cache.error) {
+      console.warn(JSON.stringify(cache.error));
+    }
+    printManual(cache.reason);
+  } else {
+    console.log("Remaining operator-only gaps (always review):");
+    printManual();
+  }
 }
 
 main().catch((err) => {
