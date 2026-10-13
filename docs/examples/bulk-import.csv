@@ -1,0 +1,6 @@
+slug,destination,notes,expires_at,active_at,timezone,max_hits
+hello,https://example.com/welcome,Welcome link,,,UTC,
+promo,https://example.com/sale,Summer promo,2026-12-31T23:59:59.000Z,2026-06-01T00:00:00.000Z,UTC,1000
+launch,https://example.com/go,Goes live later,,2026-07-01 09:00:00,UTC,
+localdemo,https://example.com/local,Host-local evening,2026-12-31 23:59:59,,Local,
+sgtdemo,https://example.com/sg,Singapore wall time,2026-12-31 23:59:59,,SGT,

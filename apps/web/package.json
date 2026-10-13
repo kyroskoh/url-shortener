@@ -1,6 +1,6 @@
 {
   "name": "@blink/web",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
+    "@blink/shared": "*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

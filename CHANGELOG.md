@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.5] — 2026-10-13
+
+### Added
+
+- Phase 5a: CLI `blink get` / `quarantine` / `hits`; client `get` / `setStatus`; admin `GET /api/stats` + summary strip
+- `BLINK_ABUSE_CONTACT` on quarantined/expired branded pages ([docs/ABUSE.md](docs/ABUSE.md))
+- Bulk import Load/Download template + [docs/examples/bulk-import.csv](docs/examples/bulk-import.csv)
+- Soft pause (`paused` status, Pause/Resume, branded `410` paused page)
+- Delayed activation via `active_at` (migration `0004_lifecycle.sql`; `not_yet_active` until time)
+- `BLINK_DUPLICATE_DESTINATION=warn|block` (default `warn`)
+- Bulk import: `expires_at` / `active_at` / `timezone` columns; non-ISO dates; UTC / Local / SGT / IANA timezones
+
+### Changed
+
+- Edit link: `expiresAt` and `activeAt` parity (clear with null/empty)
+- Admin UI: stats strip, pause controls, active-at fields, timezone tip on bulk import
+
 ## [0.6.4] — 2026-10-13
 
 ### Changed
@@ -185,6 +202,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed locked `drizzle-kit` (use `npx drizzle-kit@0.31.11 generate` when needed) to drop nested vulnerable `esbuild` / `@esbuild-kit` chain
 - `npm audit`: 0 vulnerabilities
 
+[0.6.5]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.5
 [0.6.4]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.4
 [0.6.3]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.3
 [0.6.2]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.2

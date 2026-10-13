@@ -1,8 +1,10 @@
 import type {
   CreateLinkInput,
   CreateLinkResponse,
+  GetLinkResponse,
   HitSeries,
   LinkList,
+  SetLinkStatusResponse,
 } from "./types.js";
 
 export type * from "./types.js";
@@ -93,6 +95,20 @@ export class BlinkClient {
   delete(slug: string): Promise<{ ok: boolean }> {
     return this.request(`/links/${encodeURIComponent(slug)}`, {
       method: "DELETE",
+    });
+  }
+
+  get(slug: string): Promise<GetLinkResponse> {
+    return this.request(`/links/${encodeURIComponent(slug)}`);
+  }
+
+  setStatus(
+    slug: string,
+    status: "active" | "paused" | "quarantined",
+  ): Promise<SetLinkStatusResponse> {
+    return this.request(`/links/${encodeURIComponent(slug)}/status`, {
+      method: "POST",
+      body: JSON.stringify({ status }),
     });
   }
 

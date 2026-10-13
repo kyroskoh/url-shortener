@@ -15,6 +15,8 @@ Password-protected and one-time links can still be quarantined; quarantine is ch
 
 ## Report a bad link
 
+**Public reporting:** set `BLINK_ABUSE_CONTACT` (email, `https://…` URL, or plain text). Visitors see it on branded **Link unavailable** and **Link expired** pages (`410`). Example: `BLINK_ABUSE_CONTACT=abuse@layurl.com`.
+
 1. Note the short URL slug (path after `/`).
 2. Sign in as admin (password) or use `X-API-Key`.
 3. Find the link in the list (filter by slug/destination; optionally status **Quarantined** / **Active**).

@@ -52,6 +52,7 @@ Public create (when `BLINK_PUBLIC_MODE=true`) may omit auth; may require Turnsti
 |--------|------|------|-------------|
 | GET | `/api/links` | Admin | List/filter `?q=` `?tag=` `?folder=` `?cursor=` `?limit=` (default 50, max 100) → `{ links, nextCursor }` |
 | GET | `/api/links/export.csv` | Admin | CSV export (walks all pages) |
+| GET | `/api/stats` | Admin | Instance summary: link counts, hits today/7d, top slugs by lifetime hits |
 | POST | `/api/links/import` | Admin | CSV body (`text/plain` or `{ csv }`); `?dryRun=true` validates without writing |
 | POST | `/api/links` | Admin or public | Create (see body below); optional header `Idempotency-Key` |
 | GET | `/api/links/:slug` | Admin | Get one |
@@ -99,7 +100,35 @@ Duplicate destination: create response may include `warnings: ["duplicate_destin
 
 **Idempotency:** send `Idempotency-Key: <string>` on create; retries within `BLINK_IDEMPOTENCY_TTL_SEC` return the same link (`200` on replay).
 
-**Bulk import CSV columns:** `slug,destination,notes,expires_at`
+**Bulk import CSV columns:** `slug,destination,notes,expires_at,active_at,timezone,max_hits`  
+(`status` is not imported — use admin pause/quarantine.)
+
+**`timezone` column** (optional, per row; aliases `tz`, `time_zone`):
+- `UTC` (default if empty) — naive dates/times are UTC
+- `Local` — naive dates/times use the **API host** local timezone (`TZ` env / container locale)
+- Abbreviations such as `SGT`, `JST`, `EST`, … → curated IANA mapping (see admin **Timezone ?** hover table / `IMPORT_TIMEZONE_REFERENCE` in `@blink/shared`)
+- Full IANA names, e.g. `Asia/Singapore`, `America/New_York`
+
+Explicit offsets in a value (`Z`, `±HH:MM`) always win over the column. Unix epoch is always absolute UTC. Note: bare `CST` means **China** (`Asia/Shanghai`); use `CST-US` / `CT` for US Central.
+
+**Date fields** (`expires_at`, `active_at`) accept:
+- ISO-8601 (`2026-12-31T23:59:59.000Z`)
+- `YYYY-MM-DD` (midnight in the row’s timezone mode)
+- `YYYY-MM-DD HH:mm:ss` or `YYYY-MM-DDTHH:mm:ss` (naive → row timezone; or with `Z` / `±HH:MM`)
+- Unix epoch seconds (10 digits) or milliseconds (13 digits)
+
+Ambiguous locales (`MM/DD/YYYY`, `DD/MM/YYYY`) are **rejected**. Empty date cell = unset.
+
+Canonical template: [`docs/examples/bulk-import.csv`](examples/bulk-import.csv).
+
+```bash
+curl -sS -X POST "$BLINK_BASE_URL/api/links/import?dryRun=true" \
+  -H "X-API-Key: $BLINK_API_KEY" \
+  -H "Content-Type: text/plain" \
+  --data-binary @docs/examples/bulk-import.csv
+```
+
+Omit `?dryRun=true` (or set `dryRun=false`) to write rows.
 
 ### Webhooks
 

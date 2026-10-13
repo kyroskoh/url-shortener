@@ -29,6 +29,7 @@ export const links = pgTable("links", {
   hits: bigint("hits", { mode: "number" }).notNull().default(0),
   lastHitAt: timestamp("last_hit_at", { withTimezone: true }),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
+  activeAt: timestamp("active_at", { withTimezone: true }),
   passwordHash: text("password_hash"),
   oneTime: boolean("one_time").notNull().default(false),
   maxHits: integer("max_hits"),

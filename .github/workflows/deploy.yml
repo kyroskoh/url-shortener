@@ -16,7 +16,7 @@ on:
         type: boolean
         default: false
       image_tag:
-        description: GHCR image tag (e.g. v0.6.4 or latest)
+        description: GHCR image tag (e.g. v0.6.5 or latest)
         type: string
         default: latest
 

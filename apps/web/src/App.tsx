@@ -1,6 +1,30 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { api, type Config, type Folder, type Link, type Tag } from "./api";
+import {
+  api,
+  type Config,
+  type Folder,
+  type InstanceStats,
+  type Link,
+  type Tag,
+} from "./api";
+import { IMPORT_TIMEZONE_REFERENCE } from "@blink/shared";
 import { formatDateTimeBoth } from "./datetime";
+
+const BULK_IMPORT_TEMPLATE = `slug,destination,notes,expires_at,active_at,timezone,max_hits
+hello,https://example.com/welcome,Welcome link,,,UTC,
+promo,https://example.com/sale,Summer promo,2026-12-31T23:59:59.000Z,2026-06-01T00:00:00.000Z,UTC,1000
+launch,https://example.com/go,Goes live later,,2026-07-01 09:00:00,UTC,
+localdemo,https://example.com/local,Host-local evening,2026-12-31 23:59:59,,Local,
+sgtdemo,https://example.com/sg,Singapore wall time,2026-12-31 23:59:59,,SGT,
+`;
+
+function isoToDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 declare global {
   interface Window {
@@ -27,6 +51,7 @@ export function App() {
   const [slug, setSlug] = useState("");
   const [notes, setNotes] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
+  const [activeAt, setActiveAt] = useState("");
   const [utmSource, setUtmSource] = useState("");
   const [utmMedium, setUtmMedium] = useState("");
   const [utmCampaign, setUtmCampaign] = useState("");
@@ -40,9 +65,9 @@ export function App() {
   const [filter, setFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [folderFilter, setFolderFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "quarantined">(
-    "all",
-  );
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "paused" | "quarantined"
+  >("all");
   const [links, setLinks] = useState<Link[]>([]);
   const turnstileWidgetId = useRef<string | null>(null);
   const turnstileRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,6 +85,8 @@ export function App() {
   const [editMaxHitsBaseline, setEditMaxHitsBaseline] = useState<number | null>(
     null,
   );
+  const [editExpiresAt, setEditExpiresAt] = useState("");
+  const [editActiveAt, setEditActiveAt] = useState("");
   const [preview, setPreview] = useState<{
     slug: string;
     title: string | null;
@@ -73,6 +100,7 @@ export function App() {
   } | null>(null);
   const [importCsv, setImportCsv] = useState("");
   const [importResult, setImportResult] = useState<string>("");
+  const [instanceStats, setInstanceStats] = useState<InstanceStats | null>(null);
   const [newTag, setNewTag] = useState("");
   const [newFolder, setNewFolder] = useState("");
   const [openQrSlugs, setOpenQrSlugs] = useState<Set<string>>(() => new Set());
@@ -84,6 +112,23 @@ export function App() {
       else next.add(slug);
       return next;
     });
+  }
+
+  function loadBulkImportTemplate() {
+    setImportCsv(BULK_IMPORT_TEMPLATE);
+    setImportResult("");
+  }
+
+  function downloadBulkImportTemplate() {
+    const blob = new Blob([BULK_IMPORT_TEMPLATE], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "bulk-import.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function downloadQr(slug: string) {
@@ -127,18 +172,23 @@ export function App() {
     if (!authed) {
       setLinks([]);
       setNextCursor(null);
+      setInstanceStats(null);
       return;
     }
-    const res = await api.list({
-      q: filter || undefined,
-      tag: tagFilter || undefined,
-      folder: folderFilter || undefined,
-      limit: 50,
-    });
+    const [res, statsRes] = await Promise.all([
+      api.list({
+        q: filter || undefined,
+        tag: tagFilter || undefined,
+        folder: folderFilter || undefined,
+        limit: 50,
+      }),
+      api.stats(),
+    ]);
     if (res.data) {
       setLinks(res.data.links);
       setNextCursor(res.data.nextCursor);
     }
+    if (statsRes.data) setInstanceStats(statsRes.data);
   }, [authed, filter, tagFilter, folderFilter]);
 
   async function loadMoreLinks() {
@@ -252,6 +302,7 @@ export function App() {
     setSlug("");
     setNotes("");
     setExpiresAt("");
+    setActiveAt("");
     setUtmSource("");
     setUtmMedium("");
     setUtmCampaign("");
@@ -274,6 +325,7 @@ export function App() {
         destination,
         notes: notes || null,
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+        activeAt: activeAt ? new Date(activeAt).toISOString() : null,
         oneTime,
       };
       if (slug.trim()) body.slug = slug.trim();
@@ -351,7 +403,10 @@ export function App() {
       const res = await api.update(editing.slug, {
         destination: editing.destination,
         notes: editing.notes,
-        expiresAt: editing.expiresAt,
+        expiresAt: editExpiresAt
+          ? new Date(editExpiresAt).toISOString()
+          : null,
+        activeAt: editActiveAt ? new Date(editActiveAt).toISOString() : null,
         oneTime: editing.oneTime,
         maxHits: editing.maxHits,
         folderId: editing.folderId,
@@ -366,6 +421,8 @@ export function App() {
       }
       setEditing(null);
       setEditMaxHitsBaseline(null);
+      setEditExpiresAt("");
+      setEditActiveAt("");
       setInfo("Link updated");
       await refreshLinks();
       await refreshMeta();
@@ -402,7 +459,10 @@ export function App() {
     await refreshLinks();
   }
 
-  async function setStatus(slug: string, status: "active" | "quarantined") {
+  async function setStatus(
+    slug: string,
+    status: "active" | "paused" | "quarantined",
+  ) {
     setBusy(true);
     setError("");
     try {
@@ -411,7 +471,13 @@ export function App() {
         setError(res.error);
         return;
       }
-      setInfo(status === "quarantined" ? "Link quarantined" : "Link re-enabled");
+      setInfo(
+        status === "quarantined"
+          ? "Link quarantined"
+          : status === "paused"
+            ? "Link paused"
+            : "Link re-enabled",
+      );
       await refreshLinks();
     } finally {
       setBusy(false);
@@ -634,6 +700,14 @@ export function App() {
                     placeholder="Unlimited"
                   />
                 </label>
+                <label>
+                  Active at (optional)
+                  <input
+                    type="datetime-local"
+                    value={activeAt}
+                    onChange={(e) => setActiveAt(e.target.value)}
+                  />
+                </label>
                 {authed && (
                   <>
                     <label>
@@ -737,30 +811,105 @@ export function App() {
           <section className="panel">
             <h2 style={{ marginTop: 0 }}>Bulk import</h2>
             <p className="meta">
-              CSV columns: slug, destination, notes, expires_at
+              CSV columns: <code>slug</code>, <code>destination</code>,{" "}
+              <code>notes</code>, <code>expires_at</code>, <code>active_at</code>,{" "}
+              <code>timezone</code> (<code>UTC</code>, <code>Local</code>,{" "}
+              <code>SGT</code>, or IANA e.g. <code>Asia/Singapore</code>),{" "}
+              <code>max_hits</code>. Hover the timezone tip by the template
+              buttons for the full abbreviation table. Use{" "}
+              <strong>Dry-run</strong> first.
             </p>
             <textarea
-              rows={4}
+              rows={5}
               value={importCsv}
               onChange={(e) => setImportCsv(e.target.value)}
-              placeholder={"slug,destination,notes,expires_at\nhello,https://example.com,,"}
+              placeholder={
+                "slug,destination,notes,expires_at,active_at,timezone,max_hits\nhello,https://example.com,,,,SGT,"
+              }
             />
-            <div className="row" style={{ marginTop: "0.75rem" }}>
-              <button
-                type="button"
-                className="secondary"
-                disabled={busy || !importCsv.trim()}
-                onClick={() => void runImport(true)}
-              >
-                Dry-run
-              </button>
-              <button
-                type="button"
-                disabled={busy || !importCsv.trim()}
-                onClick={() => void runImport(false)}
-              >
-                Import
-              </button>
+            <div className="import-actions">
+              <div className="row import-actions-buttons">
+                <div className="tz-ref-wrap">
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={busy}
+                    onClick={loadBulkImportTemplate}
+                  >
+                    Load template
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={busy}
+                    onClick={downloadBulkImportTemplate}
+                  >
+                    Download template
+                  </button>
+                  <span
+                    className="tz-ref-tip"
+                    tabIndex={0}
+                    aria-label="Timezone reference table"
+                  >
+                    Timezone ?
+                    <div className="tz-ref-popover" role="tooltip">
+                      <p className="tz-ref-title">Timezone column values</p>
+                      <p className="tz-ref-note">
+                        Naive dates use this zone. Explicit <code>Z</code> /
+                        offsets and unix epoch ignore it. Full IANA names also
+                        work (e.g. <code>Asia/Singapore</code>).
+                      </p>
+                      <div className="tz-ref-scroll">
+                        <table className="tz-ref-table">
+                          <thead>
+                            <tr>
+                              <th>Code</th>
+                              <th>IANA</th>
+                              <th>Label</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {IMPORT_TIMEZONE_REFERENCE.map((row) => (
+                              <tr key={row.code}>
+                                <td>
+                                  <code>{row.code}</code>
+                                </td>
+                                <td>
+                                  <code>{row.iana}</code>
+                                </td>
+                                <td>
+                                  {row.label}
+                                  {row.note ? (
+                                    <span className="tz-ref-row-note">
+                                      {" "}
+                                      — {row.note}
+                                    </span>
+                                  ) : null}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={busy || !importCsv.trim()}
+                  onClick={() => void runImport(true)}
+                >
+                  Dry-run
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || !importCsv.trim()}
+                  onClick={() => void runImport(false)}
+                >
+                  Import
+                </button>
+              </div>
             </div>
             {importResult && <p className="msg ok">{importResult}</p>}
           </section>
@@ -790,6 +939,40 @@ export function App() {
               Folders: {folders.map((f) => f.name).join(", ") || "none"}
             </p>
           </section>
+
+          {instanceStats && (
+            <div className="stats-strip" aria-label="Instance summary">
+              <span>
+                <strong>{instanceStats.totalLinks}</strong> links
+              </span>
+              <span>
+                <strong>{instanceStats.activeLinks}</strong> active
+              </span>
+              {instanceStats.pausedLinks != null && (
+                <span>
+                  <strong>{instanceStats.pausedLinks}</strong> paused
+                </span>
+              )}
+              <span>
+                <strong>{instanceStats.quarantinedLinks}</strong> quarantined
+              </span>
+              <span>
+                <strong>{instanceStats.hitsToday}</strong> hits today
+              </span>
+              <span>
+                <strong>{instanceStats.hits7d}</strong> hits (7d)
+              </span>
+              {instanceStats.topSlugs.length > 0 && (
+                <span className="stats-strip-top">
+                  Top:{" "}
+                  {instanceStats.topSlugs
+                    .slice(0, 3)
+                    .map((t) => `${t.slug} (${t.hits})`)
+                    .join(", ")}
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="toolbar">
             <h2 className="toolbar-title">Your links</h2>
@@ -828,12 +1011,15 @@ export function App() {
               className="toolbar-filter toolbar-filter-status"
               value={statusFilter}
               onChange={(e) =>
-                setStatusFilter(e.target.value as "all" | "active" | "quarantined")
+                setStatusFilter(
+                  e.target.value as "all" | "active" | "paused" | "quarantined",
+                )
               }
               aria-label="Status filter"
             >
               <option value="all">All statuses</option>
               <option value="active">Active</option>
+              <option value="paused">Paused</option>
               <option value="quarantined">Quarantined</option>
             </select>
           </div>
@@ -978,6 +1164,22 @@ export function App() {
                         Can only increase or clear (not decrease).
                       </span>
                     </label>
+                    <label>
+                      Expires at
+                      <input
+                        type="datetime-local"
+                        value={editExpiresAt}
+                        onChange={(e) => setEditExpiresAt(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Active at
+                      <input
+                        type="datetime-local"
+                        value={editActiveAt}
+                        onChange={(e) => setEditActiveAt(e.target.value)}
+                      />
+                    </label>
                     <div className="row">
                       <button type="submit" disabled={busy}>
                         Save
@@ -988,6 +1190,8 @@ export function App() {
                         onClick={() => {
                           setEditing(null);
                           setEditMaxHitsBaseline(null);
+                          setEditExpiresAt("");
+                          setEditActiveAt("");
                         }}
                       >
                         Cancel
@@ -1006,12 +1210,16 @@ export function App() {
                         className={
                           link.status === "quarantined"
                             ? "status-badge status-quarantined"
-                            : "status-badge status-active"
+                            : link.status === "paused"
+                              ? "status-badge status-paused"
+                              : "status-badge status-active"
                         }
                       >
                         {link.status === "quarantined"
                           ? "quarantined · redirects blocked"
-                          : "active"}
+                          : link.status === "paused"
+                            ? "paused · redirects blocked"
+                            : "active"}
                       </span>
                       {link.hasPassword ? " · password" : ""}
                       {link.oneTime ? " · one-time" : ""}
@@ -1038,6 +1246,11 @@ export function App() {
                         expires {formatDateTimeBoth(link.expiresAt)}
                       </p>
                     )}
+                    {link.activeAt && (
+                      <p className="meta">
+                        active from {formatDateTimeBoth(link.activeAt)}
+                      </p>
+                    )}
                     <div className="row">
                       <button
                         type="button"
@@ -1046,6 +1259,8 @@ export function App() {
                           setEditing(link);
                           setEditMaxHitsBaseline(link.maxHits);
                           setEditTags(link.tags.map((t) => t.name).join(", "));
+                          setEditExpiresAt(isoToDatetimeLocal(link.expiresAt));
+                          setEditActiveAt(isoToDatetimeLocal(link.activeAt));
                         }}
                       >
                         Edit
@@ -1066,16 +1281,47 @@ export function App() {
                       >
                         Hits
                       </button>
-                      {link.status === "active" ? (
-                        <button
-                          type="button"
-                          className="secondary"
-                          disabled={busy}
-                          onClick={() => void setStatus(link.slug, "quarantined")}
-                        >
-                          Quarantine
-                        </button>
-                      ) : (
+                      {link.status === "active" && (
+                        <>
+                          <button
+                            type="button"
+                            className="secondary"
+                            disabled={busy}
+                            onClick={() => void setStatus(link.slug, "paused")}
+                          >
+                            Pause
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary"
+                            disabled={busy}
+                            onClick={() => void setStatus(link.slug, "quarantined")}
+                          >
+                            Quarantine
+                          </button>
+                        </>
+                      )}
+                      {link.status === "paused" && (
+                        <>
+                          <button
+                            type="button"
+                            className="secondary"
+                            disabled={busy}
+                            onClick={() => void setStatus(link.slug, "active")}
+                          >
+                            Resume
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary"
+                            disabled={busy}
+                            onClick={() => void setStatus(link.slug, "quarantined")}
+                          >
+                            Quarantine
+                          </button>
+                        </>
+                      )}
+                      {link.status === "quarantined" && (
                         <button
                           type="button"
                           className="secondary"

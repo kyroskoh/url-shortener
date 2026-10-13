@@ -5,6 +5,9 @@ function usage(): never {
   console.error(`Usage:
   blink create <destination> [--slug SLUG] [--notes TEXT] [--max-hits N]
   blink list [--limit N] [--cursor CURSOR]
+  blink get <slug>
+  blink quarantine <slug> [--clear]
+  blink hits <slug> [--from ISO] [--to ISO]
   blink delete <slug>
 
 Env:
@@ -31,6 +34,10 @@ function flag(args: string[], name: string): string | undefined {
   const i = args.indexOf(name);
   if (i < 0) return undefined;
   return args[i + 1];
+}
+
+function hasFlag(args: string[], name: string): boolean {
+  return args.includes(name);
 }
 
 async function main(): Promise<void> {
@@ -68,6 +75,33 @@ async function main(): Promise<void> {
       limit: Number.isFinite(limit) ? limit : undefined,
       cursor,
     });
+    console.log(JSON.stringify(res, null, 2));
+    return;
+  }
+
+  if (cmd === "get") {
+    const slug = rest[0];
+    if (!slug) usage();
+    const res = await client.get(slug);
+    console.log(JSON.stringify(res, null, 2));
+    return;
+  }
+
+  if (cmd === "quarantine") {
+    const slug = rest[0];
+    if (!slug) usage();
+    const clear = hasFlag(rest, "--clear");
+    const res = await client.setStatus(slug, clear ? "active" : "quarantined");
+    console.log(JSON.stringify(res, null, 2));
+    return;
+  }
+
+  if (cmd === "hits") {
+    const slug = rest[0];
+    if (!slug) usage();
+    const from = flag(rest, "--from");
+    const to = flag(rest, "--to");
+    const res = await client.hits(slug, from, to);
     console.log(JSON.stringify(res, null, 2));
     return;
   }

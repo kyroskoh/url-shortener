@@ -1,4 +1,18 @@
-import { and, asc, desc, eq, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  lt,
+  lte,
+  or,
+  sql,
+  sum,
+} from "drizzle-orm";
 import {
   applyUtmParams,
   createLinkSchema,
@@ -11,6 +25,7 @@ import {
   type LinkDto,
   type LinkStatus,
   type TagDto,
+  type InstanceStats,
   type UpdateLinkInput,
 } from "@blink/shared";
 import { hashLinkPassword } from "./auth.js";
@@ -35,8 +50,13 @@ import {
 import { checkDestinationUrl } from "./url-check.js";
 import { notifyHitWebhook } from "./webhooks.js";
 
+function normalizeStatus(raw: string): LinkStatus {
+  if (raw === "quarantined" || raw === "paused") return raw;
+  return "active";
+}
+
 async function toDto(row: Link, tagList?: TagDto[]): Promise<LinkDto> {
-  const status = (row.status === "quarantined" ? "quarantined" : "active") as LinkStatus;
+  const status = normalizeStatus(row.status);
   const resolvedTags =
     tagList ??
     (await tagsForSlugs([row.slug])).get(row.slug) ??
@@ -49,6 +69,7 @@ async function toDto(row: Link, tagList?: TagDto[]): Promise<LinkDto> {
     hits: Number(row.hits),
     lastHitAt: row.lastHitAt?.toISOString() ?? null,
     expiresAt: row.expiresAt?.toISOString() ?? null,
+    activeAt: row.activeAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     shortUrl: shortUrl(row.slug),
@@ -237,6 +258,58 @@ function hourBucketUtc(d = new Date()): Date {
   );
 }
 
+export async function getInstanceStats(): Promise<InstanceStats> {
+  const now = new Date();
+  const dayStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+  const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const [
+    totalRow,
+    activeRow,
+    pausedRow,
+    quarantinedRow,
+    hitsTodayRow,
+    hits7dRow,
+    topRows,
+  ] = await Promise.all([
+    db.select({ n: count() }).from(links),
+    db.select({ n: count() }).from(links).where(eq(links.status, "active")),
+    db.select({ n: count() }).from(links).where(eq(links.status, "paused")),
+    db
+      .select({ n: count() })
+      .from(links)
+      .where(eq(links.status, "quarantined")),
+    db
+      .select({ total: sum(hitAggregates.hits) })
+      .from(hitAggregates)
+      .where(gte(hitAggregates.bucketStart, dayStart)),
+    db
+      .select({ total: sum(hitAggregates.hits) })
+      .from(hitAggregates)
+      .where(gte(hitAggregates.bucketStart, weekStart)),
+    db
+      .select({ slug: links.slug, hits: links.hits })
+      .from(links)
+      .orderBy(desc(links.hits))
+      .limit(10),
+  ]);
+
+  return {
+    totalLinks: Number(totalRow[0]?.n ?? 0),
+    activeLinks: Number(activeRow[0]?.n ?? 0),
+    pausedLinks: Number(pausedRow[0]?.n ?? 0),
+    quarantinedLinks: Number(quarantinedRow[0]?.n ?? 0),
+    hitsToday: Number(hitsTodayRow[0]?.total ?? 0),
+    hits7d: Number(hits7dRow[0]?.total ?? 0),
+    topSlugs: topRows.map((r) => ({
+      slug: r.slug,
+      hits: Number(r.hits),
+    })),
+  };
+}
+
 export async function getHitSeries(
   slug: string,
   from?: Date,
@@ -343,10 +416,23 @@ export async function createLink(input: CreateLinkInput): Promise<CreateResult> 
 
   const warnings: string[] = [];
   const dupes = await findDuplicates(withUtm);
-  if (dupes.length) warnings.push("duplicate_destination");
+  if (dupes.length) {
+    if (config.duplicateDestination === "block") {
+      return {
+        ok: false,
+        status: 409,
+        error: "duplicate_destination",
+        message: `Destination already used by: ${dupes.slice(0, 5).join(", ")}`,
+      };
+    }
+    warnings.push("duplicate_destination");
+  }
 
   const expiresAt = parsed.data.expiresAt
     ? new Date(parsed.data.expiresAt)
+    : null;
+  const activeAt = parsed.data.activeAt
+    ? new Date(parsed.data.activeAt)
     : null;
 
   let passwordHash: string | null = null;
@@ -365,6 +451,7 @@ export async function createLink(input: CreateLinkInput): Promise<CreateResult> 
       notes: parsed.data.notes ?? null,
       status: "active",
       expiresAt,
+      activeAt,
       passwordHash,
       oneTime: parsed.data.oneTime ?? false,
       maxHits,
@@ -463,6 +550,12 @@ export async function updateLink(
           : parsed.data.expiresAt
             ? new Date(parsed.data.expiresAt)
             : null,
+      activeAt:
+        parsed.data.activeAt === undefined
+          ? undefined
+          : parsed.data.activeAt
+            ? new Date(parsed.data.activeAt)
+            : null,
       passwordHash,
       oneTime: parsed.data.oneTime === undefined ? undefined : parsed.data.oneTime,
       maxHits: parsed.data.maxHits === undefined ? undefined : parsed.data.maxHits,
@@ -494,7 +587,7 @@ export async function setLinkStatus(
       ok: false,
       status: 400,
       error: "validation_error",
-      message: "Status must be active or quarantined",
+      message: "Status must be active, paused, or quarantined",
     };
   }
   return updateLink(slug, { status: parsed.data });
@@ -512,6 +605,8 @@ export type ResolveResult =
   | { status: "missing" }
   | { status: "expired" }
   | { status: "quarantined" }
+  | { status: "paused" }
+  | { status: "not_yet_active" }
   | { status: "password_required"; slug: string };
 
 export async function resolveRedirect(
@@ -525,6 +620,14 @@ export async function resolveRedirect(
   if (row.status === "quarantined") {
     await cacheDel(slug);
     return { status: "quarantined" };
+  }
+  if (row.status === "paused") {
+    await cacheDel(slug);
+    return { status: "paused" };
+  }
+  if (row.activeAt && row.activeAt.getTime() > Date.now()) {
+    await cacheDel(slug);
+    return { status: "not_yet_active" };
   }
   if (isExpired(row)) return { status: "expired" };
 

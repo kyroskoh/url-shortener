@@ -74,7 +74,8 @@ async function main() {
       slug === "folders" ||
       slug === "site-home" ||
       slug === "admin" ||
-      slug === "metrics"
+      slug === "metrics" ||
+      slug === "stats"
     ) {
       return reply.callNotFound();
     }

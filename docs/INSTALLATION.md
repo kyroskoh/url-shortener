@@ -73,6 +73,8 @@ All app settings use the `BLINK_*` prefix. See [`.env.example`](../.env.example)
 | `BLINK_WEBHOOK_SECRET` | empty | HMAC secret for `X-Blink-Signature` |
 | `BLINK_IDEMPOTENCY_TTL_SEC` | `86400` | Create `Idempotency-Key` Redis TTL |
 | `BLINK_LANDING_PAGE` | empty | In-container path to custom HTML for `/` |
+| `BLINK_ABUSE_CONTACT` | empty | Email/URL/text on quarantined & expired pages |
+| `BLINK_DUPLICATE_DESTINATION` | `warn` | `warn` \| `block` on create when destination already exists |
 | `DATABASE_URL` | compose default | Postgres |
 | `REDIS_URL` | compose default | Redis |
 

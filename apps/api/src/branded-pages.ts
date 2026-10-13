@@ -1,6 +1,40 @@
 import { config } from "./config.js";
 
-function page(title: string, headline: string, detail: string): string {
+function formatAbuseContactHtml(raw: string): string {
+  const contact = raw.trim();
+  if (!contact) return "";
+  if (/^https?:\/\//i.test(contact)) {
+    const href = escapeHtml(contact);
+    return `<a href="${href}">${href}</a>`;
+  }
+  if (/^mailto:/i.test(contact)) {
+    const href = escapeHtml(contact);
+    const label = escapeHtml(contact.replace(/^mailto:/i, ""));
+    return `<a href="${href}">${label}</a>`;
+  }
+  if (contact.includes("@") && !/\s/.test(contact)) {
+    const esc = escapeHtml(contact);
+    return `<a href="mailto:${esc}">${esc}</a>`;
+  }
+  return escapeHtml(contact);
+}
+
+function abuseContactBlock(): string {
+  const contact = config.abuseContact.trim();
+  if (!contact) return "";
+  return `<p style="margin-top:1rem;color:var(--muted);line-height:1.5">To report abuse: ${formatAbuseContactHtml(contact)}</p>`;
+}
+
+function page(
+  title: string,
+  headline: string,
+  detail: string,
+  opts?: { showAbuseContact?: boolean },
+): string {
+  const abuse =
+    opts?.showAbuseContact && config.abuseContact.trim()
+      ? abuseContactBlock()
+      : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -41,6 +75,7 @@ function page(title: string, headline: string, detail: string): string {
     <p class="host">layurl.com</p>
     <h1>${escapeHtml(headline)}</h1>
     <p>${escapeHtml(detail)}</p>
+    ${abuse}
     <p style="margin-top:1.5rem"><a href="${escapeHtml(config.baseUrl)}/admin/">Go home</a></p>
   </main>
 </body>
@@ -60,7 +95,12 @@ export function notFoundPage(): string {
 }
 
 export function gonePage(): string {
-  return page("Expired", "Link expired", "This short link has expired and is no longer available.");
+  return page(
+    "Expired",
+    "Link expired",
+    "This short link has expired and is no longer available.",
+    { showAbuseContact: true },
+  );
 }
 
 export function quarantinedPage(): string {
@@ -68,6 +108,25 @@ export function quarantinedPage(): string {
     "Unavailable",
     "Link unavailable",
     "This short link has been disabled by an administrator and cannot be opened.",
+    { showAbuseContact: true },
+  );
+}
+
+export function pausedPage(): string {
+  return page(
+    "Paused",
+    "Link paused",
+    "This short link is temporarily paused and cannot be opened right now.",
+    { showAbuseContact: true },
+  );
+}
+
+export function notYetActivePage(): string {
+  return page(
+    "Not yet active",
+    "Link not yet active",
+    "This short link is scheduled and is not available yet.",
+    { showAbuseContact: true },
   );
 }
 

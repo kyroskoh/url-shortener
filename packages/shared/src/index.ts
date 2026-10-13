@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+export {
+  IMPORT_TIMEZONE_REFERENCE,
+  isValidIanaTimeZone,
+  resolveImportTimezone,
+  wallTimeInZoneToUtc,
+  type ImportTimezoneMode,
+  type TimezoneReferenceRow,
+} from "./import-timezones.js";
+
 export const RESERVED_SLUGS = new Set([
   // App / API routes
   "api",
@@ -177,6 +186,7 @@ export const createLinkSchema = z.object({
   slug: slugSchema.optional(),
   notes: z.string().max(2000).optional().nullable(),
   expiresAt: z.string().datetime().optional().nullable(),
+  activeAt: z.string().datetime().optional().nullable(),
   turnstileToken: z.string().optional(),
   utmSource: utmField,
   utmMedium: utmField,
@@ -191,12 +201,13 @@ export const createLinkSchema = z.object({
   folderId: z.string().uuid().optional().nullable(),
 });
 
-export const linkStatusSchema = z.enum(["active", "quarantined"]);
+export const linkStatusSchema = z.enum(["active", "paused", "quarantined"]);
 
 export const updateLinkSchema = z.object({
   destination: z.string().min(1).max(8192).optional(),
   notes: z.string().max(2000).optional().nullable(),
   expiresAt: z.string().datetime().optional().nullable(),
+  activeAt: z.string().datetime().optional().nullable(),
   status: linkStatusSchema.optional(),
   password: z.string().min(1).max(256).optional().nullable(),
   clearPassword: z.boolean().optional(),
@@ -210,6 +221,23 @@ export const updateLinkSchema = z.object({
 export type CreateLinkInput = z.infer<typeof createLinkSchema>;
 export type UpdateLinkInput = z.infer<typeof updateLinkSchema>;
 export type LinkStatus = z.infer<typeof linkStatusSchema>;
+
+export const instanceStatsSchema = z.object({
+  totalLinks: z.number().int().nonnegative(),
+  activeLinks: z.number().int().nonnegative(),
+  pausedLinks: z.number().int().nonnegative(),
+  quarantinedLinks: z.number().int().nonnegative(),
+  hitsToday: z.number().int().nonnegative(),
+  hits7d: z.number().int().nonnegative(),
+  topSlugs: z.array(
+    z.object({
+      slug: z.string(),
+      hits: z.number().int().nonnegative(),
+    }),
+  ),
+});
+
+export type InstanceStats = z.infer<typeof instanceStatsSchema>;
 
 export type UtmParams = {
   utmSource?: string | null;
@@ -312,6 +340,7 @@ export type LinkDto = {
   hits: number;
   lastHitAt: string | null;
   expiresAt: string | null;
+  activeAt: string | null;
   createdAt: string;
   updatedAt: string;
   shortUrl: string;

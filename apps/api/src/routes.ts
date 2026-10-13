@@ -14,7 +14,9 @@ import {
 import {
   gonePage,
   notFoundPage,
+  notYetActivePage,
   passwordGatePage,
+  pausedPage,
   quarantinedPage,
 } from "./branded-pages.js";
 import { config, shortUrl } from "./config.js";
@@ -27,6 +29,7 @@ import {
   deleteLink,
   exportCsv,
   getHitSeries,
+  getInstanceStats,
   getLink,
   getLinkRow,
   listLinks,
@@ -122,6 +125,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     turnstileRequired: config.publicMode && turnstileRequiredForPublic(),
     turnstileConfigured: turnstileKeysPresent(),
     urlCheckProvider: config.urlCheckProvider,
+    duplicateDestination: config.duplicateDestination,
     customLanding: hasLandingPageConfigured(),
     adminPath: "/admin/",
   }));
@@ -206,6 +210,11 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(404).send({ error: "not_found", message: "Folder not found" });
     }
     return { ok: true };
+  });
+
+  app.get("/stats", async (request, reply) => {
+    if (!(await requireAdmin(request, reply))) return;
+    return getInstanceStats();
   });
 
   app.get(
@@ -335,6 +344,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       slug: body.slug ? String(body.slug) : undefined,
       notes: body.notes != null ? String(body.notes) : null,
       expiresAt: body.expiresAt != null ? String(body.expiresAt) : null,
+      activeAt: body.activeAt != null ? String(body.activeAt) : null,
       utmSource: body.utmSource != null ? String(body.utmSource) : undefined,
       utmMedium: body.utmMedium != null ? String(body.utmMedium) : undefined,
       utmCampaign: body.utmCampaign != null ? String(body.utmCampaign) : undefined,
@@ -445,8 +455,12 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       notes: body.notes === undefined ? undefined : (body.notes as string | null),
       expiresAt:
         body.expiresAt === undefined ? undefined : (body.expiresAt as string | null),
+      activeAt:
+        body.activeAt === undefined ? undefined : (body.activeAt as string | null),
       status:
-        body.status === "active" || body.status === "quarantined"
+        body.status === "active" ||
+        body.status === "paused" ||
+        body.status === "quarantined"
           ? body.status
           : undefined,
       password: body.password != null ? String(body.password) : undefined,
@@ -480,10 +494,14 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     async (request, reply) => {
       if (!(await requireAdmin(request, reply))) return;
       const status = request.body?.status;
-      if (status !== "active" && status !== "quarantined") {
+      if (
+        status !== "active" &&
+        status !== "paused" &&
+        status !== "quarantined"
+      ) {
         return reply.code(400).send({
           error: "validation_error",
-          message: "Status must be active or quarantined",
+          message: "Status must be active, paused, or quarantined",
         });
       }
       const result = await setLinkStatus(request.params.slug, status);
@@ -525,7 +543,11 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     async (request, reply) => {
       const slug = request.params.slug;
       const row = await getLinkRow(slug);
-      if (!row || row.status === "quarantined") {
+      if (
+        !row ||
+        row.status === "quarantined" ||
+        row.status === "paused"
+      ) {
         return reply.code(404).type("text/html").send(notFoundPage());
       }
       if (!row.passwordHash) {
@@ -593,6 +615,22 @@ export async function handleRedirect(
       .header("Cache-Control", "no-store, no-cache, must-revalidate")
       .type("text/html")
       .send(quarantinedPage());
+    return;
+  }
+  if (result.status === "paused") {
+    reply
+      .code(410)
+      .header("Cache-Control", "no-store, no-cache, must-revalidate")
+      .type("text/html")
+      .send(pausedPage());
+    return;
+  }
+  if (result.status === "not_yet_active") {
+    reply
+      .code(410)
+      .header("Cache-Control", "no-store, no-cache, must-revalidate")
+      .type("text/html")
+      .send(notYetActivePage());
     return;
   }
   if (result.status === "password_required") {

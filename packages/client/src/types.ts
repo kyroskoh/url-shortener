@@ -4,10 +4,11 @@ export type Link = {
   slug: string;
   destination: string;
   notes: string | null;
-  status: "active" | "quarantined";
+  status: "active" | "paused" | "quarantined";
   hits: number;
   lastHitAt?: string | null;
   expiresAt?: string | null;
+  activeAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
   shortUrl: string;
@@ -42,4 +43,12 @@ export type CreateLinkResponse = {
 
 export type HitSeries = {
   points: { t: string; hits: number }[];
+};
+
+export type GetLinkResponse = {
+  link: Link;
+};
+
+export type SetLinkStatusResponse = {
+  link: Link;
 };

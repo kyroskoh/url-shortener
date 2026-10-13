@@ -39,6 +39,11 @@ export const config = {
   webhookUrl: process.env.BLINK_WEBHOOK_URL ?? "",
   webhookSecret: process.env.BLINK_WEBHOOK_SECRET ?? "",
   idempotencyTtlSec: int(process.env.BLINK_IDEMPOTENCY_TTL_SEC, 86400),
+  abuseContact: process.env.BLINK_ABUSE_CONTACT ?? "",
+  duplicateDestination: (() => {
+    const v = (process.env.BLINK_DUPLICATE_DESTINATION ?? "warn").toLowerCase();
+    return v === "block" ? ("block" as const) : ("warn" as const);
+  })(),
   databaseUrl:
     process.env.DATABASE_URL ?? "postgres://blink:blink@localhost:5432/blink",
   redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",

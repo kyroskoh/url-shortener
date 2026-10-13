@@ -5,10 +5,11 @@ export type Link = {
   slug: string;
   destination: string;
   notes: string | null;
-  status: "active" | "quarantined";
+  status: "active" | "paused" | "quarantined";
   hits: number;
   lastHitAt: string | null;
   expiresAt: string | null;
+  activeAt: string | null;
   createdAt: string;
   updatedAt: string;
   shortUrl: string;
@@ -29,6 +30,7 @@ export type Config = {
   turnstileRequired: boolean;
   turnstileConfigured?: boolean;
   urlCheckProvider?: string;
+  duplicateDestination?: "warn" | "block";
   customLanding?: boolean;
   adminPath?: string;
 };
@@ -41,6 +43,16 @@ export type Preview = {
 
 export type HitSeries = {
   points: { t: string; hits: number }[];
+};
+
+export type InstanceStats = {
+  totalLinks: number;
+  activeLinks: number;
+  pausedLinks: number;
+  quarantinedLinks: number;
+  hitsToday: number;
+  hits7d: number;
+  topSlugs: { slug: string; hits: number }[];
 };
 
 export type ImportResult = {
@@ -110,6 +122,7 @@ export const api = {
     }),
   logout: () => req<{ ok: boolean }>("/auth/logout", { method: "POST" }),
   me: () => req<{ authenticated: boolean }>("/auth/me"),
+  stats: () => req<InstanceStats>("/stats"),
   list: (params?: ListParams) =>
     req<{ links: Link[]; nextCursor: string | null }>(
       `/links${listQuery(params)}`,
@@ -128,7 +141,7 @@ export const api = {
     req<{ ok: boolean }>(`/links/${encodeURIComponent(slug)}`, {
       method: "DELETE",
     }),
-  setStatus: (slug: string, status: "active" | "quarantined") =>
+  setStatus: (slug: string, status: "active" | "paused" | "quarantined") =>
     req<{ link: Link }>(`/links/${encodeURIComponent(slug)}/status`, {
       method: "POST",
       body: JSON.stringify({ status }),
