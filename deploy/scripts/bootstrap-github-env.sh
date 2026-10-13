@@ -133,6 +133,17 @@ set_secret() {
   fi
 }
 
+# Remove Environment secret when .env.production leaves the key empty (e.g. clear Turnstile).
+clear_secret_if_empty() {
+  local key="$1"
+  local val="${!key:-}"
+  if [[ -z "$val" ]]; then
+    if gh secret delete "$key" --env "$ENV_NAME" --repo "$REPO" >/dev/null 2>&1; then
+      echo "  cleared secret $key"
+    fi
+  fi
+}
+
 echo "Setting variables …"
 set_var BLINK_BASE_URL
 set_var BLINK_PUBLIC_MODE
@@ -155,6 +166,8 @@ set_secret BLINK_SESSION_SECRET
 set_secret POSTGRES_PASSWORD
 set_secret BLINK_TURNSTILE_SITE_KEY
 set_secret BLINK_TURNSTILE_SECRET_KEY
+clear_secret_if_empty BLINK_TURNSTILE_SITE_KEY
+clear_secret_if_empty BLINK_TURNSTILE_SECRET_KEY
 set_secret CLOUDFLARE_API_TOKEN
 set_secret CLOUDFLARE_ZONE_ID
 set_secret CLOUDFLARE_ORIGIN_IPV4
