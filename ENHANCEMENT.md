@@ -1,12 +1,12 @@
 # Enhancements backlog & implementation roadmap
 
-Phases 0–4 and trust/ops through **[v0.6.4](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.4)** are the last **beta** line. This roadmap turns every former Candidate plus first-class gap items (audit log, webhook event filter, edit parity, session revoke, **public user accounts** with **basic register and/or Social SSO**) into sequenced releases. Deferred/won’t-do rows stay out of scope (geo analytics, retries/DLQ, enterprise OIDC, K8s, multi-tenant billing, etc.). See [PRD.md](PRD.md) / [CHANGELOG.md](CHANGELOG.md).
+Phases 0–4 and trust/ops through **[v0.6.4](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.4)** were the last beta line before Phase 5. **[v0.6.5](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.5)** shipped Phase **5a + 5b**; deployable images are on **[v0.6.6](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.6)** (web Docker `@blink/shared` fix). This roadmap turns every former Candidate plus first-class gap items (audit log, webhook event filter, edit parity, session revoke, **public user accounts** with **basic register and/or Social SSO**) into sequenced releases. Deferred/won’t-do rows stay out of scope (geo analytics, retries/DLQ, enterprise OIDC, K8s, multi-tenant billing, etc.). See [PRD.md](PRD.md) / [CHANGELOG.md](CHANGELOG.md).
 
 ## Versioning policy (beta → official)
 
 | Line | Meaning |
 |------|---------|
-| **≤ v0.6.4** | Beta / pre-1.0 (current production) |
+| **≤ v0.6.6** | Beta / pre-1.0 (Phase 5a/5b on this line; current production target) |
 | **v1.0.0** | **First official release (out of beta)** — Phases 5a + 5b + 5c complete |
 | **v1.1.0+** | Post-GA: multi-admin → public accounts → trust/edge → supply chain |
 
@@ -41,16 +41,16 @@ Every phase (5a, 5b, 5c, GA cut, 6, 7, 8, 9) must be **tested and verified befor
 
 | Phase | Target | Status | Notes for next agent |
 |-------|--------|--------|----------------------|
-| **5a** | → v1.0.0 | **Done (unreleased)** | CLI/stats/abuse contact/bulk template; tests + typecheck green |
-| **5b** | → v1.0.0 | **In progress / nearly done** | Code landed; finish verify (migrate `0004`, e2e/smoke), then mark Done |
-| **5c** | → v1.0.0 | **Not started** | Webhooks 2.0 — next major coding slice after 5b gate |
-| **GA** | **v1.0.0** | Blocked on 5a–5c | Tag + beta→stable docs |
+| **5a** | → v1.0.0 | **Done** ([v0.6.5](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.5)) | CLI/stats/abuse contact/bulk template |
+| **5b** | → v1.0.0 | **Done** ([v0.6.5](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.5); images [v0.6.6](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.6)) | Pause, `active_at`, duplicate block, edit parity, import timezones; migrate `0004` on origin |
+| **5c** | → v1.0.0 | **Not started** | Webhooks 2.0 — **next** coding slice |
+| **GA** | **v1.0.0** | Blocked on 5c | Tag + beta→stable docs after 5c gate |
 | **6** | v1.1.0 | Planned | Multi-admin, API keys, audit, session revoke |
 | **7** | v1.2.0 | Planned | Public accounts + Social SSO + linking |
 | **8** | v1.3.0 | Planned | Safe Browsing, CF purge, www→apex |
 | **9** | v1.4.0 | Planned | Docker Hub, rollback automation, Origin CA |
 
-**Working tree:** Phase 5a/5b changes are largely uncommitted. Apply migration `apps/api/drizzle/0004_lifecycle.sql` (`active_at`) before runtime testing redirects/lifecycle.
+**Production:** Ship **`BLINK_IMAGE_TAG=v0.6.6`** (not `v0.6.5` — that tag’s CI never published GHCR images). Ensure migration `0004_lifecycle.sql` has been applied on the origin DB.
 
 ---
 
@@ -106,13 +106,14 @@ Update this file’s statuses as each phase ships; add Phase 5–8 sections to [
 - Prometheus `/metrics`
 - Per-link `maxHits` (edit may only increase or clear)
 
-### Through v0.6.4
+### Through v0.6.6
 
 - Phase 4 ops (backups, GHCR, E2E); trust/ops harden; admin login + mobile UI
+- Phase 5a/5b feature line ([v0.6.5](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.5)) + web Docker `@blink/shared` fix ([v0.6.6](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.6))
 
 ---
 
-## Phase 5a — Quick wins (**Done**, part of v1.0.0)
+## Phase 5a — Quick wins (**Done**, [v0.6.5](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.5))
 
 ### Acceptance (verified)
 
@@ -186,7 +187,7 @@ promo,https://example.com/sale?utm_source=blink,Summer promo,2026-12-31T23:59:59
 
 ---
 
-## Phase 5b — Link lifecycle (**In progress**, part of v1.0.0)
+## Phase 5b — Link lifecycle (**Done**, [v0.6.5](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.5) / deploy [v0.6.6](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.6))
 
 ### Scope
 
@@ -250,11 +251,10 @@ launch,https://example.com/go,Goes live later,,2026-07-01T09:00:00.000Z,Asia/Sin
 
 ### Remaining for 5b gate
 
-- [ ] Run DB migrate / compose with `0004_lifecycle.sql`
-- [ ] Smoke redirects: paused / not-yet-active / active
-- [ ] Confirm duplicate `block` via create API
-- [ ] Optional e2e touch for pause + import dry-run
-- [ ] Mark this section **Done** and note in CHANGELOG when cutting toward v1.0.0
+- [x] Code + CHANGELOG for [v0.6.5](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.5); deployable images on [v0.6.6](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.6)
+- [x] Unit tests for import timezone / lifecycle paths (package tests)
+- [ ] On each origin: confirm migrate `0004_lifecycle.sql` applied after first pull of 0.6.5+
+- [ ] Optional: expand Playwright for pause + import dry-run before v1.0.0
 
 ---
 
@@ -593,9 +593,9 @@ Not in the current Phase 5–9 / v1.x implementation plan. Revisit when ops or p
 
 ## Suggested next-agent sequence
 
-1. **Finish Phase 5b gate** — migrate `0004`, smoke lifecycle redirects, duplicate block, mark Done here.
+1. **Confirm prod on v0.6.6** — `BLINK_IMAGE_TAG=v0.6.6`, migration `0004` applied, smoke pause / `active_at` / stats.
 2. **Implement Phase 5c** — webhooks events + filter + Redis status (file list above).
-3. **GA v1.0.0** — CHANGELOG/README/PRD + tag (only after 5a–5c verified).
+3. **GA v1.0.0** — CHANGELOG/README/PRD + tag (only after 5c verified).
 4. Continue **6 → 7 → 8 → 9** per sections above; keep Future consideration out of scope unless reprioritized.
 
 ---

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.6] — 2026-10-13
+
+### Fixed
+
+- Web Docker image build: copy and build local `@blink/shared` workspace (v0.6.5 CI failed with npm 404 for `@blink/shared`)
+
 ## [0.6.5] — 2026-10-13
 
 ### Added
@@ -23,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Edit link: `expiresAt` and `activeAt` parity (clear with null/empty)
 - Admin UI: stats strip, pause controls, active-at fields, timezone tip on bulk import
+
+### Note
+
+- Tag `v0.6.5` CI did not publish images (web Dockerfile regression). Use **[v0.6.6](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.6)** for GHCR deploy.
 
 ## [0.6.4] — 2026-10-13
 
@@ -202,6 +212,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed locked `drizzle-kit` (use `npx drizzle-kit@0.31.11 generate` when needed) to drop nested vulnerable `esbuild` / `@esbuild-kit` chain
 - `npm audit`: 0 vulnerabilities
 
+[0.6.6]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.6
 [0.6.5]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.5
 [0.6.4]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.4
 [0.6.3]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.3
