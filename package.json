@@ -1,7 +1,7 @@
 {
   "name": "url-shortener",
   "private": true,
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Blink — URL shortener for layurl.com",
   "workspaces": [
     "apps/*",
@@ -20,7 +20,8 @@
     "ops:bootstrap": "node scripts/ops-run.mjs bootstrap",
     "ops:bootstrap:cf": "node scripts/ops-run.mjs bootstrap:cf",
     "ops:ship": "node scripts/ops-run.mjs ship",
-    "ops:cf-dry-run": "node scripts/ops-run.mjs cf-dry-run"
+    "ops:cf-dry-run": "node scripts/ops-run.mjs cf-dry-run",
+    "ops:turnstile": "node scripts/ops-run.mjs turnstile"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0"

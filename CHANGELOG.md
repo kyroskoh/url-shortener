@@ -7,8 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3] — 2026-10-13
+
+### Added
+
+- `ops:turnstile` / [`ensure-turnstile.mjs`](deploy/scripts/ensure-turnstile.mjs) — create or reuse Cloudflare Turnstile widget `blink-layurl` and write `BLINK_TURNSTILE_*` into `.env.production` (token needs Turnstile Sites Write)
+
 ### Fixed
 
+- `render-env.sh` escapes `$` as `$$` so Docker Compose does not truncate secrets (e.g. passwords with `$`)
+- `GET /auth/me` returns `200 { authenticated: false }` when logged out (avoids red 401 noise in the admin UI)
+- Cap Turnstile widget render retries in the admin UI so a missing script cannot poll forever
 - Ops scripts load `.env.production` via `load-env.sh` so passwords containing `$` do not fail under `set -u`
 - `ops:cf-dry-run` bootstraps with `--cf-only` (no `DEPLOY_*` required); Cloudflare dry-run job uses Environment `production` secrets
 - Windows `ops:*` uses Git Bash + `gh.exe` via `scripts/ops-run.mjs` (avoids WSL↔gh.exe segfaults); resolve `DEPLOY_SSH_KEY_FILE` paths under WSL/Git Bash

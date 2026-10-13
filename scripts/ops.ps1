@@ -1,8 +1,8 @@
 # Ops wrappers for Blink production (Git Bash + Windows gh.exe — not WSL).
-# Usage: .\scripts\ops.ps1 bootstrap|ship|cf-dry-run
+# Usage: .\scripts\ops.ps1 bootstrap|ship|cf-dry-run|turnstile
 param(
   [Parameter(Mandatory = $true, Position = 0)]
-  [ValidateSet("bootstrap", "ship", "cf-dry-run")]
+  [ValidateSet("bootstrap", "ship", "cf-dry-run", "turnstile")]
   [string]$Command
 )
 
@@ -44,5 +44,9 @@ switch ($Command) {
   }
   "cf-dry-run" {
     Invoke-GitBash "$Root\deploy\scripts\ship-prod.sh" @("--dry-run")
+  }
+  "turnstile" {
+    & node "$Root\deploy\scripts\ensure-turnstile.mjs"
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   }
 }

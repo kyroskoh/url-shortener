@@ -21,6 +21,7 @@ npm run ops:ship   # or: npm run ops:cf-dry-run first
 Optional splits:
 
 ```bash
+npm run ops:turnstile    # create/reuse CF Turnstile widget → write BLINK_TURNSTILE_* into .env.production
 npm run ops:bootstrap    # sync secrets/vars only
 npm run ops:cf-dry-run   # bootstrap + Cloudflare dry-run (no deploy)
 ```
@@ -32,10 +33,11 @@ cp .env.production.example .env.production
 # fill secrets; prefer DEPLOY_SSH_KEY_FILE=/path/to/key
 
 gh auth login   # once, if needed
+.\scripts\ops.ps1 turnstile   # needs Account → Turnstile → Edit on the API token
 .\scripts\ops.ps1 ship   # or: .\scripts\ops.ps1 cf-dry-run first
 ```
 
-Scripts never print secret values. They call [`bootstrap-github-env.sh`](../deploy/scripts/bootstrap-github-env.sh) and [`ship-prod.sh`](../deploy/scripts/ship-prod.sh).
+Scripts never print secret values. They call [`ensure-turnstile.mjs`](../deploy/scripts/ensure-turnstile.mjs), [`bootstrap-github-env.sh`](../deploy/scripts/bootstrap-github-env.sh) and [`ship-prod.sh`](../deploy/scripts/ship-prod.sh).
 
 ## Secret inventory (Environment `production`)
 

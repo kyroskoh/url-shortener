@@ -149,8 +149,10 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.get("/auth/me", async (request, reply) => {
-    if (!(await requireAdmin(request, reply))) return;
+  app.get("/auth/me", async (request) => {
+    if (!(await requireAdminQuiet(request))) {
+      return { authenticated: false };
+    }
     return { authenticated: true };
   });
 

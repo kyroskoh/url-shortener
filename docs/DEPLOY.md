@@ -219,7 +219,14 @@ Do **not** reuse other sites’ certificates. Deploy issues `/etc/letsencrypt/li
    | `BLINK_IMAGE_TAG` | e.g. `v0.6.2` or `latest` |
    | `GITHUB_REPO` | `kyroskoh/url-shortener` if `gh` cannot infer |
 
-   Optional: Turnstile keys + `BLINK_TURNSTILE_FORCE=true` for public mode. Full list: [GITHUB_SECRETS.md](GITHUB_SECRETS.md).
+   Optional: Turnstile keys + `BLINK_TURNSTILE_FORCE=true` for public mode. Prefer generating keys:
+
+   ```bash
+   npm run ops:turnstile
+   # Windows: .\scripts\ops.ps1 turnstile
+   ```
+
+   Requires API token permission **Account → Turnstile → Edit**. Full list: [GITHUB_SECRETS.md](GITHUB_SECRETS.md).
 
 3. **Dry-run Cloudflare** (recommended first time):
 

@@ -12,6 +12,7 @@ Create an API token with at least:
 - Zone — Zone Settings — Edit
 - Zone — Cache Purge — Purge (optional)
 - Account — Account Rulesets — Edit (or Zone — Transform/Cache Rules as available on your plan)
+- Account — Turnstile — Edit (`Turnstile Sites Write`) — required for `npm run ops:turnstile`
 
 **Prefer GitHub Secrets** (`CLOUDFLARE_*`) for production. For local runs, set in `.env`:
 
@@ -76,7 +77,7 @@ The script **cannot** finish these; complete them manually:
 |-----|-------------------------|
 | Domain not in Cloudflare yet | Cloudflare → **Add a site** → follow NS instructions |
 | Nameserver cutover | Your **registrar** → replace NS with Cloudflare’s (API cannot change registrar NS) |
-| Turnstile keys | **Turnstile** → Add site → copy site/secret into `BLINK_TURNSTILE_*` |
+| Turnstile keys | Prefer `npm run ops:turnstile` (creates/reuses widget `blink-layurl` for `layurl.com`/`www`, writes `BLINK_TURNSTILE_*`). Fallback: dashboard **Turnstile** → Add site → paste keys. Token needs **Turnstile Sites Write**. |
 | Full (strict) but origin is HTTP-only | **SSL/TLS** → **Origin Server** → Create certificate → install on nginx HTTPS, **or** temporarily use Full (not strict) until origin has TLS |
 | Token/plan cannot edit Rulesets | **Caching** → **Cache Rules** → Create rule: Bypass cache for short-link redirects |
 | SSL mode not updated | **SSL/TLS** → **Overview** → Full (strict) |

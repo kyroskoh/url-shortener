@@ -45,6 +45,7 @@ export function App() {
   );
   const [links, setLinks] = useState<Link[]>([]);
   const turnstileWidgetId = useRef<string | null>(null);
+  const turnstileRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -108,7 +109,7 @@ export function App() {
 
   const refreshAuth = useCallback(async () => {
     const me = await api.me();
-    setAuthed(me.status === 200);
+    setAuthed(me.status === 200 && me.data?.authenticated === true);
   }, []);
 
   const refreshMeta = useCallback(async () => {
@@ -187,6 +188,12 @@ export function App() {
     } else {
       renderTurnstile(config.turnstileSiteKey);
     }
+    return () => {
+      if (turnstileRetryTimer.current) {
+        clearTimeout(turnstileRetryTimer.current);
+        turnstileRetryTimer.current = null;
+      }
+    };
   }, [config, authed]);
 
   function resetTurnstile() {
@@ -200,10 +207,16 @@ export function App() {
     }
   }
 
-  function renderTurnstile(sitekey: string) {
+  function renderTurnstile(sitekey: string, attempt = 0) {
     const el = document.getElementById("turnstile-box");
     if (!el || !window.turnstile) {
-      setTimeout(() => renderTurnstile(sitekey), 200);
+      // Cap retries (~5s) so a missing script/box cannot poll forever.
+      if (attempt >= 25) return;
+      if (turnstileRetryTimer.current) clearTimeout(turnstileRetryTimer.current);
+      turnstileRetryTimer.current = setTimeout(
+        () => renderTurnstile(sitekey, attempt + 1),
+        200,
+      );
       return;
     }
     el.innerHTML = "";

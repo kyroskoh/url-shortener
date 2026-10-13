@@ -12,11 +12,17 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 const cmd = process.argv[2];
-const allowed = new Set(["bootstrap", "bootstrap:cf", "ship", "cf-dry-run"]);
+const allowed = new Set(["bootstrap", "bootstrap:cf", "ship", "cf-dry-run", "turnstile"]);
 
 if (!allowed.has(cmd)) {
-  console.error("Usage: node scripts/ops-run.mjs bootstrap|bootstrap:cf|ship|cf-dry-run");
+  console.error(
+    "Usage: node scripts/ops-run.mjs bootstrap|bootstrap:cf|ship|cf-dry-run|turnstile",
+  );
   process.exit(1);
+}
+
+if (cmd === "turnstile") {
+  run(process.execPath, [path.join(root, "deploy/scripts/ensure-turnstile.mjs")]);
 }
 
 function run(command, args, opts = {}) {
