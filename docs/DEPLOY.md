@@ -327,3 +327,18 @@ Related scripts:
 | [`deploy/scripts/ensure-letsencrypt.sh`](../deploy/scripts/ensure-letsencrypt.sh) | certbot webroot for cert name |
 | [`deploy/scripts/install-host-nginx.sh`](../deploy/scripts/install-host-nginx.sh) | HTTP → certbot → SSL vhost |
 | [`deploy/scripts/cloudflare-provision.mjs`](../deploy/scripts/cloudflare-provision.mjs) | DNS / SSL mode / cache bypass |
+
+## Acknowledgments
+
+- Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url)
+- Live at [layurl.com](https://layurl.com)
+- Community feedback and contributions
+
+## Support
+
+- Issues: [GitHub Issues](https://github.com/kyroskoh/url-shortener/issues)
+- Discussions: [GitHub Discussions](https://github.com/kyroskoh/url-shortener/discussions)
+
+---
+
+Made with ❤️ by [Kyros Koh](https://github.com/kyroskoh)

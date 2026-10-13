@@ -1127,7 +1127,15 @@ export function App() {
       )}
 
       <footer className="footer">
-        Blink · hosted on layurl.com · privacy-respecting redirects
+        Blink · hosted on layurl.com · by{" "}
+        <a
+          href="https://github.com/kyroskoh"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          @kyroskoh
+        </a>{" "}
+        · privacy-respecting redirects
       </footer>
     </div>
   );

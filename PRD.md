@@ -366,3 +366,18 @@ Verified / hardened in [v0.6.0](https://github.com/kyroskoh/url-shortener/releas
 
 1. Phase 0: local compose → staging origin → Cloudflare provisioner apply → layurl.com
 2. Phases 1–4: implement per this PRD in order; do not skip Phase 1 before public open create at scale
+
+## Acknowledgments
+
+- Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url)
+- Live at [layurl.com](https://layurl.com)
+- Community feedback and contributions
+
+## Support
+
+- Issues: [GitHub Issues](https://github.com/kyroskoh/url-shortener/issues)
+- Discussions: [GitHub Discussions](https://github.com/kyroskoh/url-shortener/discussions)
+
+---
+
+Made with ❤️ by [Kyros Koh](https://github.com/kyroskoh)

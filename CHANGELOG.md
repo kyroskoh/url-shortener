@@ -189,3 +189,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.3.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0
 [0.2.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0
 [0.1.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0
+
+## Acknowledgments
+
+- Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url)
+- Live at [layurl.com](https://layurl.com)
+- Community feedback and contributions
+
+## Support
+
+- Issues: [GitHub Issues](https://github.com/kyroskoh/url-shortener/issues)
+- Discussions: [GitHub Discussions](https://github.com/kyroskoh/url-shortener/discussions)
+
+---
+
+Made with ❤️ by [Kyros Koh](https://github.com/kyroskoh)

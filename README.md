@@ -152,3 +152,19 @@ npm run ops:ship
 ## License
 
 [MIT](LICENSE.md)
+
+## Acknowledgments
+
+- Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url)
+- Live at [layurl.com](https://layurl.com)
+- Community feedback and contributions
+
+## Support
+
+- Email: [support@layurl.com](mailto:support@layurl.com)
+- Issues: [GitHub Issues](https://github.com/kyroskoh/url-shortener/issues)
+- Discussions: [GitHub Discussions](https://github.com/kyroskoh/url-shortener/discussions)
+
+---
+
+Made with ❤️ by [Kyros Koh](https://github.com/kyroskoh)

@@ -81,3 +81,18 @@ Prefer storing secrets in [GitHub Secrets](GITHUB_SECRETS.md) and rendering `.en
 - Purge Cloudflare cache for that path if you ever allowed edge caching (provisioner bypasses short-link cache by default).
 - Keep the blocklist updated for repeat offender hosts.
 - Re-enable when safe; Redis cache is cleared on status change so the destination works again.
+
+## Acknowledgments
+
+- Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url)
+- Live at [layurl.com](https://layurl.com)
+- Community feedback and contributions
+
+## Support
+
+- Issues: [GitHub Issues](https://github.com/kyroskoh/url-shortener/issues)
+- Discussions: [GitHub Discussions](https://github.com/kyroskoh/url-shortener/discussions)
+
+---
+
+Made with ❤️ by [Kyros Koh](https://github.com/kyroskoh)

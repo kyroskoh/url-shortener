@@ -42,3 +42,18 @@ Ideas beyond the shipped roadmap. Phases 0–4 complete; trust/ops hardening thr
 | Idea | A/B destinations, link trees, branded domains per link | Out of scope |
 | Won’t do | Kubernetes operator, multi-region active-active | Phase 4 non-goals |
 | Idea | Webhook retries / DLQ | Fire-and-forget until ops demand |
+
+## Acknowledgments
+
+- Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url)
+- Live at [layurl.com](https://layurl.com)
+- Community feedback and contributions
+
+## Support
+
+- Issues: [GitHub Issues](https://github.com/kyroskoh/url-shortener/issues)
+- Discussions: [GitHub Discussions](https://github.com/kyroskoh/url-shortener/discussions)
+
+---
+
+Made with ❤️ by [Kyros Koh](https://github.com/kyroskoh)

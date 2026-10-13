@@ -156,3 +156,18 @@ Secrets: [GITHUB_SECRETS.md](GITHUB_SECRETS.md). Irreducible once: Cloudflare zo
 ## Resource expectations
 
 Node-based images are larger than chhoto-url’s scratch/alpine Rust images. Expect tens to low hundreds of MB RAM for the full stack under light load — not &lt;10 MB. Optimize later if needed.
+
+## Acknowledgments
+
+- Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url)
+- Live at [layurl.com](https://layurl.com)
+- Community feedback and contributions
+
+## Support
+
+- Issues: [GitHub Issues](https://github.com/kyroskoh/url-shortener/issues)
+- Discussions: [GitHub Discussions](https://github.com/kyroskoh/url-shortener/discussions)
+
+---
+
+Made with ❤️ by [Kyros Koh](https://github.com/kyroskoh)

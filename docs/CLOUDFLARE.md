@@ -100,3 +100,18 @@ Set `BLINK_BASE_URL=https://layurl.com`. Secrets and deploy: [GITHUB_SECRETS.md]
 Production edge on the origin is **host nginx** ([`deploy/nginx.blink-layurl.com.conf`](../deploy/nginx.blink-layurl.com.conf) → `zz-blink-layurl.com.conf`) → localhost API/web containers. Compose’s nginx service is not used in prod.
 
 For **Full (strict)**, origin must present TLS on 443. Deploy runs `ensure-letsencrypt.sh` (uses existing **certbot** if present, else installs it) to issue `/etc/letsencrypt/live/layurl.com/` for `layurl.com` + `www.layurl.com` via HTTP-01 webroot (`/var/www/certbot`). It does **not** reuse other lineages (e.g. `api.kyroskoh.xyz`). Set `BLINK_LETSENCRYPT_EMAIL` in `.env.production`. DNS for layurl.com must already point at this origin (or Cloudflare orange-cloud with HTTP challenge reaching origin on port 80).
+
+## Acknowledgments
+
+- Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url)
+- Live at [layurl.com](https://layurl.com)
+- Community feedback and contributions
+
+## Support
+
+- Issues: [GitHub Issues](https://github.com/kyroskoh/url-shortener/issues)
+- Discussions: [GitHub Discussions](https://github.com/kyroskoh/url-shortener/discussions)
+
+---
+
+Made with ❤️ by [Kyros Koh](https://github.com/kyroskoh)

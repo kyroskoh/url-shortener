@@ -130,3 +130,18 @@ JSON `{ "error": "code", "message": "..." }` with appropriate HTTP status (`400`
 ## Rate limits
 
 Redis-backed; keyed by `CF-Connecting-IP` or `X-Forwarded-For` first hop / peer. Exceeding limit → `429`.
+
+## Acknowledgments
+
+- Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url)
+- Live at [layurl.com](https://layurl.com)
+- Community feedback and contributions
+
+## Support
+
+- Issues: [GitHub Issues](https://github.com/kyroskoh/url-shortener/issues)
+- Discussions: [GitHub Discussions](https://github.com/kyroskoh/url-shortener/discussions)
+
+---
+
+Made with ❤️ by [Kyros Koh](https://github.com/kyroskoh)

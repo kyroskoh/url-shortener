@@ -73,3 +73,18 @@ Scripts never print secret values. They call [`ensure-turnstile.mjs`](../deploy/
 **Actions → Deploy → Run workflow** still works with the same inputs (`cloudflare`, `deploy`, `image_tag`). Prefer `npm run ops:ship`.
 
 See also [CLOUDFLARE.md](CLOUDFLARE.md), [INSTALLATION.md](INSTALLATION.md), [ABUSE.md](ABUSE.md).
+
+## Acknowledgments
+
+- Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url)
+- Live at [layurl.com](https://layurl.com)
+- Community feedback and contributions
+
+## Support
+
+- Issues: [GitHub Issues](https://github.com/kyroskoh/url-shortener/issues)
+- Discussions: [GitHub Discussions](https://github.com/kyroskoh/url-shortener/discussions)
+
+---
+
+Made with ❤️ by [Kyros Koh](https://github.com/kyroskoh)
