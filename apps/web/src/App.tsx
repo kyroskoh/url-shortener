@@ -489,35 +489,45 @@ export function App() {
 
   return (
     <div className="shell">
-      <div className="auth-bar">
-        {authed ? (
-          <>
-            <a className="btn secondary" href={api.exportUrl}>
-              Export CSV
-            </a>
-            <button type="button" className="secondary" onClick={() => void onLogout()}>
-              Sign out
-            </button>
-          </>
-        ) : (
-          <form className="row" onSubmit={(e) => void onLogin(e)}>
-            <input
-              type="password"
-              placeholder="Admin password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              aria-label="Admin password"
-            />
-            <button type="submit">Sign in</button>
-          </form>
-        )}
-      </div>
+      {authed && (
+        <div className="auth-bar">
+          <a className="btn secondary" href={api.exportUrl}>
+            Export CSV
+          </a>
+          <button type="button" className="secondary" onClick={() => void onLogout()}>
+            Sign out
+          </button>
+        </div>
+      )}
 
       <header className="hero">
         <p className="brand">{config?.siteTitle ?? "Blink"}</p>
         <p className="tagline">Short links. Instant redirects.</p>
         <p className="host">layurl.com</p>
       </header>
+
+      {!authed && (
+        <section className="panel login-panel" aria-label="Admin sign in">
+          <p className="login-eyebrow">Admin</p>
+          <h2 className="login-title">Sign in</h2>
+          <p className="login-copy">Manage links, quarantine abuse, and export CSV.</p>
+          <form className="login-form" onSubmit={(e) => void onLogin(e)}>
+            <label>
+              Password
+              <input
+                type="password"
+                placeholder="Admin password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                aria-label="Admin password"
+                autoComplete="current-password"
+              />
+            </label>
+            <button type="submit">Sign in</button>
+            {error && <p className="msg error">{error}</p>}
+          </form>
+        </section>
+      )}
 
       {canCreate && (
         <section className="panel">
@@ -719,7 +729,7 @@ export function App() {
         </section>
       )}
 
-      {error && <p className="msg error">{error}</p>}
+      {error && authed && <p className="msg error">{error}</p>}
       {info && <p className="msg ok">{info}</p>}
 
       {authed && (
@@ -782,18 +792,18 @@ export function App() {
           </section>
 
           <div className="toolbar">
-            <h2 style={{ margin: 0 }}>Your links</h2>
+            <h2 className="toolbar-title">Your links</h2>
             <input
+              className="toolbar-filter toolbar-filter-q"
               placeholder="Filter slug, URL, notes"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              style={{ maxWidth: 200 }}
             />
             <input
+              className="toolbar-filter toolbar-filter-tag"
               placeholder="Tag filter"
               value={tagFilter}
               onChange={(e) => setTagFilter(e.target.value)}
-              style={{ maxWidth: 140 }}
               list="tag-list"
             />
             <datalist id="tag-list">
@@ -802,10 +812,10 @@ export function App() {
               ))}
             </datalist>
             <select
+              className="toolbar-filter toolbar-filter-folder"
               value={folderFilter}
               onChange={(e) => setFolderFilter(e.target.value)}
               aria-label="Folder filter"
-              style={{ maxWidth: 160 }}
             >
               <option value="">All folders</option>
               {folders.map((f) => (
@@ -815,12 +825,12 @@ export function App() {
               ))}
             </select>
             <select
+              className="toolbar-filter toolbar-filter-status"
               value={statusFilter}
               onChange={(e) =>
                 setStatusFilter(e.target.value as "all" | "active" | "quarantined")
               }
               aria-label="Status filter"
-              style={{ maxWidth: 160 }}
             >
               <option value="all">All statuses</option>
               <option value="active">Active</option>

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4] — 2026-10-13
+
+### Changed
+
+- Admin sign-in: branded centered login panel (eyebrow, Fraunces title, full-width password + CTA) instead of the top-right auth row
+- Admin UI mobile layout (≤640px): stacked filters, wrapping action buttons, fluid shell/login, hits chart horizontal scroll, safer Turnstile width
+
 ## [0.6.3] — 2026-10-13
 
 ### Added
@@ -178,6 +185,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed locked `drizzle-kit` (use `npx drizzle-kit@0.31.11 generate` when needed) to drop nested vulnerable `esbuild` / `@esbuild-kit` chain
 - `npm audit`: 0 vulnerabilities
 
+[0.6.4]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.4
+[0.6.3]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.3
 [0.6.2]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.2
 [0.6.1]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.1
 [0.6.0]: https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0

@@ -105,7 +105,7 @@ There is no separate GitHub Environment named `staging`. Use a staging host (or 
    #   BLINK_PASSWORD, BLINK_API_KEY, BLINK_SESSION_SECRET, POSTGRES_PASSWORD
    #   BLINK_BASE_URL=https://staging.layurl.com   # or http://STAGING_IP
    #   GHCR_OWNER=kyroskoh
-   #   BLINK_IMAGE_TAG=v0.6.2                      # or latest
+   #   BLINK_IMAGE_TAG=v0.6.4                      # or latest
    #   BLINK_LETSENCRYPT_EMAIL=you@example.com     # if using certbot on this host
    ```
 
@@ -193,8 +193,8 @@ Do **not** reuse other sites’ certificates. Deploy issues `/etc/letsencrypt/li
 
    ```bash
    # Merge to main, then:
-   git tag v0.6.2
-   git push origin v0.6.2
+   git tag v0.6.4
+   git push origin v0.6.4
    # Wait for CI: test + e2e + GHCR publish (blink-api / blink-web)
    ```
 
@@ -216,7 +216,7 @@ Do **not** reuse other sites’ certificates. Deploy issues `/etc/letsencrypt/li
    | `CLOUDFLARE_ORIGIN_IPV4` (and optional IPv6) | Proxied DNS target |
    | `DEPLOY_HOST` / `DEPLOY_USER` | SSH |
    | `DEPLOY_SSH_KEY_FILE` | Path to **unencrypted** OpenSSH private key (no passphrase; Actions cannot unlock) |
-   | `BLINK_IMAGE_TAG` | e.g. `v0.6.2` or `latest` |
+   | `BLINK_IMAGE_TAG` | e.g. `v0.6.4` or `latest` |
    | `GITHUB_REPO` | `kyroskoh/url-shortener` if `gh` cannot infer |
 
    Optional: Turnstile keys + `BLINK_TURNSTILE_FORCE=true` for public mode. Prefer generating keys:
@@ -280,7 +280,7 @@ Do **not** reuse other sites’ certificates. Deploy issues `/etc/letsencrypt/li
 |-------|--------------|-----------------|
 | `cloudflare` | `apply` | `dry-run` |
 | `deploy` | `true` | `false` |
-| `image_tag` | `v0.6.2` | n/a |
+| `image_tag` | `v0.6.4` | n/a |
 
 Prefer `npm run ops:ship` so secrets stay synced from `.env.production`.
 

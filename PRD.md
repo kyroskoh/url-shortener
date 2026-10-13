@@ -12,8 +12,8 @@ Inspired by [chhoto-url](https://github.com/SinTan1729/chhoto-url), rebuilt on N
 | **Host** | layurl.com |
 | **Repo** | url-shortener |
 | **Owner** | Operator / maintainer of this repository |
-| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phase 2 ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0), patch [v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)); Phase 3 ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0), patches [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1), [v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2)); Phase 4 ([v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0)); trust/ops harden ([v0.6.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0)) |
-| **Current phase** | Phase 4 complete; **v0.6.0** hardens Phase 1 + Cloudflare + Secrets-backed deploy — see [ENHANCEMENT.md](ENHANCEMENT.md) for next ideas |
+| **Success evidence** | Phase 0 ([v0.1.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.1.0)); Phase 1 ([v0.2.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.2.0)); Phase 2 ([v0.3.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.0), patch [v0.3.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.3.1)); Phase 3 ([v0.4.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.0), patches [v0.4.1](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.1), [v0.4.2](https://github.com/kyroskoh/url-shortener/releases/tag/v0.4.2)); Phase 4 ([v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0)); trust/ops harden ([v0.6.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0)); latest patch ([v0.6.4](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.4)) |
+| **Current phase** | Phase 4 complete; **v0.6.4** — admin login polish + mobile UI; see [ENHANCEMENT.md](ENHANCEMENT.md) for next ideas |
 
 ## Problem
 
@@ -322,7 +322,7 @@ Phases 0–3 for full E2E surface; Phase 0 sufficient for backups/CI of MVP.
 - Restore drill: create → backup → delete → restore → 302 — **passed** (local)
 - Unit + typecheck — **passed**; Playwright E2E against Compose — **passed**
 - CI / GHCR: workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml); images publish on `v*` tags
-- Release: [v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0); harden [v0.6.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0)
+- Release: [v0.5.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.5.0); harden [v0.6.0](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.0); UI polish [v0.6.4](https://github.com/kyroskoh/url-shortener/releases/tag/v0.6.4)
 
 ---
 
